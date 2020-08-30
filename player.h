@@ -2,13 +2,17 @@
 #define PLAYER_H
 
 #include "card.h"
+#include <algorithm>
 #include <QSet>
+#include <QVector>
 
 class Player {
 private:
     typedef Assist::CardCombo CardCombo;
+    typedef Assist::CardSize CardSize;
     bool landLord;
-    QSet<Card> hand, cardsChosen;
+    QSet<Card> hand;
+    QList<Card> cardsChosen;
 public:
     Player();
     void addCard(const Card& card);
