@@ -1,4 +1,4 @@
-QT       += core gui
+QT       += core gui network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -16,13 +16,23 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    card.cpp \
+    controller.cpp \
+    initdialog.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    player.cpp
 
 HEADERS += \
-    mainwindow.h
+    assist.h \
+    card.h \
+    controller.h \
+    initdialog.h \
+    mainwindow.h \
+    player.h
 
 FORMS += \
+    initdialog.ui \
     mainwindow.ui
 
 # Default rules for deployment.
