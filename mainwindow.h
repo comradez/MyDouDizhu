@@ -2,9 +2,11 @@
 #define MAINWINDOW_H
 
 #include "assist.h"
+#include "player.h"
 #include "initdialog.h"
 #include "controller.h"
 #include <QMainWindow>
+#include <QDebug>
 #include <QTcpServer>
 #include <QTcpSocket>
 
@@ -19,6 +21,8 @@ class MainWindow : public QMainWindow
 public:
     typedef Assist::PlayerType PlayerType;
     typedef Assist::CardCombo CardCombo;
+    typedef Assist::CardKind CardKind;
+    typedef Assist::CardSize CardSize;
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 

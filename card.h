@@ -17,7 +17,10 @@ public:
     CardKind getCardKind() const;
     CardSize getCardSize() const;
     QPair<CardKind,CardSize> getCard() const;
-    bool operator<(const Card& b) {
+    bool operator==(const Card& b) const {
+        return cardKind == b.cardKind && cardSize == b.cardSize;
+    }
+    bool operator<(const Card& b) const {
         return int(cardSize) < int(b.cardSize);
     }
 };
