@@ -31,18 +31,15 @@ private:
     Ui::MainWindow *ui;
     InitDialog* inputDialog;
     Player* player;
+    PlayerType landlord;
 
     std::vector<Card> globalDeck;
     std::set<Card> landlordCards;
 
-    Controller* controller;
-    GlobalController* globalController;
     QTcpSocket* connects[3];
 
     void getDataFromDialog();
-    bool sendToA(QByteArray data);
-    bool sendToB(QByteArray data);
-    bool sendToC(QByteArray data);
+    bool sendTo(int dst, QByteArray data);
     bool sendToNext(QByteArray data);
     bool sendToPrevious(QByteArray data);
     bool sendToRest(QByteArray data);
@@ -58,16 +55,6 @@ private:
 
     QHash<QTcpSocket*, QByteArray*> buffers;
     QHash<QTcpSocket*, qint32*> sizes;
-
-    PlayerType playerType;
-    PlayerType landlord;
-    QTcpServer* serverOne;
-    QTcpServer* serverTwo;
-    QTcpSocket* socketOne;
-    QTcpSocket* socketTwo;
-    QTcpSocket* connectionAB;
-    QTcpSocket* connectionBC;
-    QTcpSocket* connectionAC;
 public: signals:
     void dataReceived(QByteArray data);
 };

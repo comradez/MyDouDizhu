@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+ #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -13,10 +13,10 @@ MainWindow::MainWindow(QWidget *parent)
     inputDialog = new InitDialog(this);
     inputDialog->exec();
     player->setType(inputDialog->getPlayerType());
+    setWindowTitle(QString('A' + (int)player->getType()));
     getDataFromDialog();
+    qDebug() << "B and C";
     if (player->getType() == PlayerType::A) {
-        qDebug() << "checkpoint";
-
         for (int i = CardSize::Three; i <= CardSize::Two; i++) {
             for (int j = (int)CardKind::Spade; j <= (int)CardKind::Club; j++) {
                 globalDeck.push_back(Card(CardKind(j), CardSize(i)));
@@ -27,7 +27,6 @@ MainWindow::MainWindow(QWidget *parent)
         //放入54张牌
         std::random_shuffle(globalDeck.begin(), globalDeck.end());
         //洗牌
-        qDebug() << "checkpoint";
         for (int i = 0; i < 3; i++) {
             landlordCards.insert(*globalDeck.begin());
             globalDeck.erase(globalDeck.begin());
@@ -37,23 +36,22 @@ MainWindow::MainWindow(QWidget *parent)
             player->addCard(*globalDeck.begin());
             globalDeck.erase(globalDeck.begin());
             cardB += globalDeck.begin()->toString();
-            //sendToB(globalDeck.begin()->toString().toUtf8());
             globalDeck.erase(globalDeck.begin());
             cardC += globalDeck.begin()->toString();
-            //sendToC(globalDeck.begin()->toString().toUtf8());
             globalDeck.erase(globalDeck.begin());
         } //发掉剩余51张牌
-        sendToB(cardB.toUtf8());
-        sendToC(cardC.toUtf8());
-        qDebug() << "checkpoint";
-
+        sendTo(1, cardB.toUtf8());
+        sendTo(2, cardC.toUtf8());
         int randPlayer = QRandomGenerator::global()->bounded(0, 3);
         if (randPlayer == 0) { //A最先叫地主
             paticipate(1, -1);
+            qDebug() << "A";
         } else if (randPlayer == 1) {
-            sendToB(QString("paticipate").toUtf8());
+            qDebug() << "B";
+            sendTo(1, QString("paticipate").toUtf8());
         } else if (randPlayer == 2) {
-            sendToC(QString("paticipate").toUtf8());
+            qDebug() << "C";
+            sendTo(2, QString("paticipate").toUtf8());
         }
     }
 }
@@ -124,18 +122,32 @@ void MainWindow::getDataFromDialog() {
             connects[0] = nullptr;
             connects[1] = inputDialog->getConnectionAB();
             connects[2] = inputDialog->getConnectionAC();
+            //QByteArray* buffer1 = new QByteArray();
+            //qint32 *size1 = new qint32(0);
+            buffers.insert(connects[1], new QByteArray());
+            sizes.insert(connects[1], new qint32(0));
+            buffers.insert(connects[2], new QByteArray());
+            sizes.insert(connects[2], new qint32(0));
             break;
         }
         case (PlayerType::B): {
             connects[0] = inputDialog->getSocketOne();
             connects[1] = nullptr;
             connects[2] = inputDialog->getConnectionBC();
+            buffers.insert(connects[0], new QByteArray());
+            sizes.insert(connects[0], new qint32(0));
+            buffers.insert(connects[2], new QByteArray());
+            sizes.insert(connects[2], new qint32(0));
             break;
         }
         case (PlayerType::C): {
             connects[0] = inputDialog->getSocketOne();
             connects[1] = inputDialog->getSocketTwo();
             connects[2] = nullptr;
+            buffers.insert(connects[0], new QByteArray());
+            sizes.insert(connects[0], new qint32(0));
+            buffers.insert(connects[1], new QByteArray());
+            sizes.insert(connects[1], new qint32(0));
             break;
         }
     }
@@ -145,7 +157,7 @@ void MainWindow::getDataFromDialog() {
             connect(each, &QTcpSocket::readyRead, this, &MainWindow::readyRead);
         }
     }
-    connect(this, &MainWindow::readyRead, this, &MainWindow::handleRead);
+    connect(this, &MainWindow::dataReceived, this, &MainWindow::handleRead);
 }
 
 QByteArray MainWindow::IntToArray(qint32 source) {
@@ -155,30 +167,8 @@ QByteArray MainWindow::IntToArray(qint32 source) {
     return temp;
 }
 
-bool MainWindow::sendToA(QByteArray data) {
-    QTcpSocket* socket = connects[0];
-    if(socket->state() == QAbstractSocket::ConnectedState) {
-        socket->write(IntToArray(data.size()));
-        socket->write(data);
-        return socket->waitForBytesWritten();
-    } else {
-        return false;
-    }
-}
-
-bool MainWindow::sendToB(QByteArray data) {
-    QTcpSocket* socket = connects[1];
-    if(socket->state() == QAbstractSocket::ConnectedState) {
-        socket->write(IntToArray(data.size()));
-        socket->write(data);
-        return socket->waitForBytesWritten();
-    } else {
-        return false;
-    }
-}
-
-bool MainWindow::sendToC(QByteArray data) {
-    QTcpSocket* socket = connects[2];
+bool MainWindow::sendTo(int dst, QByteArray data) {
+    QTcpSocket* socket = connects[dst];
     if(socket->state() == QAbstractSocket::ConnectedState) {
         socket->write(IntToArray(data.size()));
         socket->write(data);
@@ -191,22 +181,22 @@ bool MainWindow::sendToC(QByteArray data) {
 bool MainWindow::sendToNext(QByteArray data) {
     switch (player->getType()) {
         case (PlayerType::A):
-            return sendToB(data);
+            return sendTo(1, data);
         case (PlayerType::B):
-            return sendToC(data);
+            return sendTo(2, data);
         case (PlayerType::C):
-            return sendToA(data);
+            return sendTo(0, data);
     } return false;
 }
 
 bool MainWindow::sendToPrevious(QByteArray data) {
     switch (player->getType()) {
         case (PlayerType::A):
-            return sendToC(data);
+            return sendTo(2, data);
         case (PlayerType::B):
-            return sendToA(data);
+            return sendTo(0, data);
         case (PlayerType::C):
-            return sendToB(data);
+            return sendTo(1, data);
     } return false;
 }
 
@@ -222,8 +212,9 @@ Assist::PlayerType MainWindow::previousOne() const {
     return PlayerType((int(player->getType()) + 2) % 3);
 }
 
-void MainWindow::readyRead()
-{
+void MainWindow::readyRead() {
+    qDebug() << "readyRead invoked!";
+
     QTcpSocket *socket = static_cast<QTcpSocket*>(sender());
     QByteArray *buffer = buffers.value(socket);
     qint32 *s = sizes.value(socket);
@@ -259,3 +250,22 @@ qint32 MainWindow::ArrayToInt(QByteArray source)
     return temp;
 }
 
+/*
+ * paticipate 从我开始抢地主
+ *
+ * landlord;num1;num2 我是第num1个抢地主的人,最后一个抢过的人是num2
+ *
+ * chosen;num 地主是num
+ */
+
+void MainWindow::handleRead(QByteArray data) {
+    QString message = QString(data);
+    QStringList attrList = message.split(";");
+    if (attrList[0] == "paticipate") {
+        paticipate(1, 1);
+    } else if (attrList[0] == "landlord") {
+        paticipate(attrList[1].toInt(), attrList[2].toInt());
+    } else if (attrList[0] == "chosen") {
+        landlord = PlayerType(attrList[1].toInt());
+    }
+}

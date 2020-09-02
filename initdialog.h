@@ -2,6 +2,8 @@
 #define INITDIALOG_H
 
 #include "assist.h"
+#include "client.h"
+#include "server.h"
 #include <chrono>
 #include <thread>
 #include <tuple>
@@ -38,12 +40,15 @@ private:
     QTcpSocket* connectionBC;
     QTcpSocket* connectionAC;
     bool readyA = false, readyB = false, readyC = false;
+
     void startMatching();
     void startGame();
     void acceptConnection();
     void handleA();
     void handleB();
     void handleC();
+
+    void startMatch();
 
 public:
     PlayerType getPlayerType() const;

@@ -7,27 +7,23 @@ InitDialog::InitDialog(QWidget *parent) :
     ui(new Ui::InitDialog)
 {
     ui->setupUi(this);
-    connect(ui->radioButtonA, &QRadioButton::toggled, [=](bool flag) {
-        if (flag) {
-            currentType = PlayerType::A;
-            ui->lineEditA->setText("LocalHost");
-            ui->lineEditA->setDisabled(true);
-            ui->lineEditB->setText("127.0.0.1");
-            ui->lineEditB->setDisabled(false);
-            ui->lineEditC->setText("127.0.0.1");
-            ui->lineEditC->setDisabled(false);
-        }
+    connect(ui->radioButtonA, &QRadioButton::toggled, [=]() {
+        currentType = PlayerType::A;
+        ui->lineEditA->setText("LocalHost");
+        ui->lineEditA->setDisabled(true);
+        ui->lineEditB->setText("127.0.0.1");
+        ui->lineEditB->setDisabled(false);
+        ui->lineEditC->setText("127.0.0.1");
+        ui->lineEditC->setDisabled(false);
     });
-    connect(ui->radioButtonB, &QRadioButton::toggled, [=](bool flag) {
-        if (flag) {
-            currentType = PlayerType::B;
-            ui->lineEditB->setText("LocalHost");
-            ui->lineEditB->setDisabled(true);
-            ui->lineEditC->setText("127.0.0.1");
-            ui->lineEditC->setDisabled(false);
-            ui->lineEditA->setText("127.0.0.1");
-            ui->lineEditA->setDisabled(false);
-        }
+    connect(ui->radioButtonB, &QRadioButton::toggled, [=]() {
+        currentType = PlayerType::B;
+        ui->lineEditB->setText("LocalHost");
+        ui->lineEditB->setDisabled(true);
+        ui->lineEditC->setText("127.0.0.1");
+        ui->lineEditC->setDisabled(false);
+        ui->lineEditA->setText("127.0.0.1");
+        ui->lineEditA->setDisabled(false);
     });
     connect(ui->radioButtonC, &QRadioButton::toggled, [=]() {
         currentType = PlayerType::C;
@@ -39,12 +35,19 @@ InitDialog::InitDialog(QWidget *parent) :
         ui->lineEditB->setDisabled(false);
     });
     connect(ui->pushButton, &QPushButton::clicked, this, &InitDialog::startMatching);
+    //connect(ui->pushButton, &QPushButton::click, this, &InitDialog::startMatch);
 }
 
 
 InitDialog::~InitDialog()
 {
     delete ui;
+}
+
+void InitDialog::startMatch() {
+    if (currentType == PlayerType::A) {
+
+    }
 }
 
 void InitDialog::startMatching() {
@@ -101,6 +104,7 @@ void InitDialog::handleA() {
             if (connectionAB->readAll() == "B is ready!") {
                 startGame();
                 connectionAC->write("Startgame");
+                connectionAC->flush();
                 //disconnect(connectionAB, 0, 0, 0);
                 //disconnect(connectionAC, 0, 0, 0);
             }
@@ -130,6 +134,7 @@ void InitDialog::handleC() {
         socketTwo->write("C is ready!");
     } else if (byteArray == "Startgame") {
         socketTwo->write("Startgame");
+        socketTwo->flush();
         startGame();
         //disconnect(socketOne, 0, 0, 0);
         //disconnect(socketTwo, 0, 0, 0);

@@ -17,17 +17,21 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     card.cpp \
+    client.cpp \
     initdialog.cpp \
     main.cpp \
     mainwindow.cpp \
-    player.cpp
+    player.cpp \
+    server.cpp
 
 HEADERS += \
     assist.h \
     card.h \
+    client.h \
     initdialog.h \
     mainwindow.h \
-    player.h
+    player.h \
+    server.h
 
 FORMS += \
     initdialog.ui \
