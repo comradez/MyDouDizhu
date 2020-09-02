@@ -41,6 +41,7 @@ InitDialog::InitDialog(QWidget *parent) :
     connect(ui->pushButton, &QPushButton::clicked, this, &InitDialog::startMatching);
 }
 
+
 InitDialog::~InitDialog()
 {
     delete ui;
@@ -49,78 +50,86 @@ InitDialog::~InitDialog()
 void InitDialog::startMatching() {
     if (currentType == PlayerType::A) {
         serverOne = new QTcpServer(nullptr);
-        serverOne->listen(QHostAddress(ui->lineEditB->text()), portAB);
-        connect(serverOne, &QTcpServer::newConnection, this, &InitDialog::acceptConnection);
-
         serverTwo = new QTcpServer(nullptr);
-        serverTwo->listen(QHostAddress(ui->lineEditC->text()), portAC);
-        connect(serverTwo, &QTcpServer::newConnection, this, &InitDialog::acceptConnection);
-    } else if (currentType == PlayerType::B) {
-        socketOne = new QTcpSocket(nullptr);
-        socketOne->connectToHost(QHostAddress(ui->lineEditA->text()), portAB);
-        while (socketOne->waitForConnected(500) == false) {
-            qDebug() << "Connection Failed";
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            socketOne->connectToHost(QHostAddress(ui->lineEditA->text()), portAB);
-        } socketOne->write(QByteArray("B"));
-
+        serverOne->listen(QHostAddress::LocalHost, portAB);
+        serverTwo->listen(QHostAddress::LocalHost, portAC);
+        connect(serverOne, &QTcpServer::newConnection, this, &InitDialog::handleA);
+        connect(serverTwo, &QTcpServer::newConnection, this, &InitDialog::handleA);
+    }
+    if (currentType == PlayerType::B) {
         serverOne = new QTcpServer(nullptr);
-        serverOne->listen(QHostAddress(ui->lineEditC->text()), portBC);
-        connect(serverOne, &QTcpServer::newConnection, this, &InitDialog::acceptConnection);
-    } else if (currentType == PlayerType::C) {
+        serverOne->listen(QHostAddress::LocalHost, portBC);
+        connect(serverOne, &QTcpServer::newConnection, this,&InitDialog::handleB);
         socketOne = new QTcpSocket(nullptr);
-        socketOne->connectToHost(QHostAddress(ui->lineEditA->text()), portAC);
+        socketOne->connectToHost(QHostAddress(ui->labelA->text()), portAB);
         while (socketOne->waitForConnected(500) == false) {
-            qDebug() << "Connection Failed";
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            socketOne->connectToHost(QHostAddress(ui->lineEditA->text()), portAC);
-        } socketOne->write(QByteArray("C"));
-
+            socketOne->connectToHost(QHostAddress::LocalHost, portAB);
+        }
+    }
+    if (currentType == PlayerType::C) {
+        socketOne = new QTcpSocket(nullptr);
         socketTwo = new QTcpSocket(nullptr);
-        socketTwo->connectToHost(QHostAddress(ui->lineEditA->text()), portBC);
+        socketOne->connectToHost(QHostAddress::LocalHost, portAC);
+        socketTwo->connectToHost(QHostAddress::LocalHost, portBC);
         while (socketTwo->waitForConnected(500) == false) {
-            qDebug() << "Connection Failed";
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            socketTwo->connectToHost(QHostAddress(ui->lineEditB->text()), portBC);
-        } socketTwo->write(QByteArray("C"));
-    }
-}
-
-void InitDialog::acceptConnection() {
-    if (currentType == PlayerType::A) {
-        if (serverOne->hasPendingConnections()) {
-            connectionAB = serverOne->nextPendingConnection();
-            connect(connectionAB, &QTcpSocket::readyRead, this, &InitDialog::handleAB);
+            socketTwo->connectToHost(QHostAddress::LocalHost, portBC);
         }
-        if (serverTwo->hasPendingConnections()) {
-            connectionAC = serverTwo->nextPendingConnection();
-            connect(connectionAC, &QTcpSocket::readyRead, this, &InitDialog::handleAC);
+        while (socketOne->waitForConnected(500) == false) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            socketOne->connectToHost(QHostAddress::LocalHost, portAC);
         }
-    } else if (currentType == PlayerType::B) {
-        if (serverOne->hasPendingConnections()) {
-            connectionBC = serverOne->nextPendingConnection();
-            connect(connectionBC, &QTcpSocket::readyRead, this, &InitDialog::handleBC);
+        connect(socketOne, &QTcpSocket::readyRead, this, &InitDialog::handleC);
+    }
+}
+
+void InitDialog::handleA() {
+    if (serverOne->hasPendingConnections()) {
+        connectionAB = serverOne->nextPendingConnection();
+        readyB = true;
+    }
+    if (serverTwo->hasPendingConnections()) {
+        connectionAC = serverTwo->nextPendingConnection();
+        readyC = true;
+    }
+    if (readyB && readyC) {
+        if (connectionAC->state() == QTcpSocket::ConnectedState) {
+            connectionAC->write("A is ready!");
         }
+        connect(connectionAB, &QTcpSocket::readyRead, [=]() {
+            if (connectionAB->readAll() == "B is ready!") {
+                startGame();
+                connectionAC->write("Startgame");
+            }
+        });
     }
 }
 
-void InitDialog::handleAB() {
-    if (QString(connectionAB->readAll()) == tr("B")) {
-        connectAB = true;
-        qDebug() << "AB OK!";
+void InitDialog::handleB() {
+    if (serverOne->hasPendingConnections()) {
+        connectionBC = serverOne->nextPendingConnection();
+        connect(connectionBC, &QTcpSocket::readyRead, [=]() {
+            QByteArray byteArray = connectionBC->readAll();
+            if (byteArray == "C is ready!") {
+                socketOne->write("B is ready!");
+            } else if (byteArray == "Startgame") {
+                startGame();
+            }
+        });
     }
 }
 
-void InitDialog::handleAC() {
-    if (QString(connectionAC->readAll()) == tr("C")) {
-        connectAC = true;
-        qDebug() << "AC OK!";
+void InitDialog::handleC() {
+    QByteArray byteArray = socketOne->readAll();
+    if (byteArray == "A is ready!") {
+        socketTwo->write("C is ready!");
+    } else if (byteArray == "Startgame") {
+        socketTwo->write("Startgame");
+        startGame();
     }
 }
 
-void InitDialog::handleBC() {
-    if (QString(connectionBC->readAll()) == tr("C")) {
-        connectBC = true;
-        qDebug() << "BC OK!";
-    }
+void InitDialog::startGame() {
+    accept();
 }

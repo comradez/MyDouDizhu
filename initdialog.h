@@ -20,7 +20,8 @@ class InitDialog : public QDialog
 public:
     typedef Assist::PlayerType PlayerType;
     const int portAB = 60001, portAC = 60002, portBC = 60003;
-    bool connectAB, connectBC, connectAC;
+    //const int portBA = 60004, portCA = 60005, portCB = 60006;
+    //bool connectAB, connectBC, connectAC;
     PlayerType currentType;
     explicit InitDialog(QWidget *parent = nullptr);
     ~InitDialog();
@@ -34,11 +35,13 @@ private:
     QTcpSocket* connectionAB;
     QTcpSocket* connectionBC;
     QTcpSocket* connectionAC;
+    bool readyA = false, readyB = false, readyC = false;
     void startMatching();
+    void startGame();
     void acceptConnection();
-    void handleAB();
-    void handleAC();
-    void handleBC();
+    void handleA();
+    void handleB();
+    void handleC();
 };
 
 #endif // INITDIALOG_H
