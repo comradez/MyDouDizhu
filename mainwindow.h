@@ -6,6 +6,7 @@
 #include "initdialog.h"
 #include "controller.h"
 #include <QMainWindow>
+#include <QRandomGenerator>
 #include <QDebug>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -29,5 +30,39 @@ public:
 private:
     Ui::MainWindow *ui;
     InitDialog* inputDialog;
+    Player* player;
+
+    std::vector<Card> globalDeck;
+    std::set<Card> landlordCards;
+
+    Controller* controller;
+    GlobalController* globalController;
+    QTcpSocket* connects[3];
+
+    void getDataFromDialog();
+    void sendToA(QString message);
+    void sendToB(QString message);
+    void sendToC(QString message);
+    void sendToNext(QString message);
+    void sendToPrevious(QString message);
+    void sendToRest(QString message);
+    void paticipate(int number, int current);
+    void fromA();
+    void fromB();
+    void fromC();
+    void from();
+
+    PlayerType nextOne() const;
+    PlayerType previousOne() const;
+
+    PlayerType playerType;
+    PlayerType landlord;
+    QTcpServer* serverOne;
+    QTcpServer* serverTwo;
+    QTcpSocket* socketOne;
+    QTcpSocket* socketTwo;
+    QTcpSocket* connectionAB;
+    QTcpSocket* connectionBC;
+    QTcpSocket* connectionAC;
 };
 #endif // MAINWINDOW_H

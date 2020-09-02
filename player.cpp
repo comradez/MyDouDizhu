@@ -4,7 +4,6 @@ Player::Player()
     : landLord(false)
 {
     assistVector.resize(18);
-
 }
 
 void Player::addCard(const Card &card) {
@@ -120,8 +119,10 @@ bool Player::checkContinousPair() const {
     } return false;
 }
 
-/*
-QList<Card>& Player::expose() {
-    return cardsChosen;
+void Player::setType(PlayerType _type) {
+    type = _type;
 }
-*/
+
+Assist::PlayerType Player::getType() const {
+    return type;
+}

@@ -3,7 +3,7 @@
 
 InitDialog::InitDialog(QWidget *parent) :
     QDialog(parent),
-    currentType(PlayerType::None),
+    currentType(PlayerType::A),
     ui(new Ui::InitDialog)
 {
     ui->setupUi(this);
@@ -101,6 +101,8 @@ void InitDialog::handleA() {
             if (connectionAB->readAll() == "B is ready!") {
                 startGame();
                 connectionAC->write("Startgame");
+                //disconnect(connectionAB, 0, 0, 0);
+                //disconnect(connectionAC, 0, 0, 0);
             }
         });
     }
@@ -115,6 +117,8 @@ void InitDialog::handleB() {
                 socketOne->write("B is ready!");
             } else if (byteArray == "Startgame") {
                 startGame();
+                //disconnect(connectionBC, 0, 0, 0);
+                //disconnect(socketOne, 0, 0, 0);
             }
         });
     }
@@ -127,9 +131,36 @@ void InitDialog::handleC() {
     } else if (byteArray == "Startgame") {
         socketTwo->write("Startgame");
         startGame();
+        //disconnect(socketOne, 0, 0, 0);
+        //disconnect(socketTwo, 0, 0, 0);
     }
 }
 
 void InitDialog::startGame() {
     accept();
+    qDebug() << (int)currentType << "starts game!";
+}
+
+Assist::PlayerType InitDialog::getPlayerType() const {
+    return currentType;
+}
+
+QTcpSocket* InitDialog::getConnectionAB() const {
+    return connectionAB;
+}
+
+QTcpSocket* InitDialog::getConnectionAC() const {
+    return connectionAC;
+}
+
+QTcpSocket* InitDialog::getConnectionBC() const {
+    return connectionBC;
+}
+
+QTcpSocket* InitDialog::getSocketOne() const {
+    return socketOne;
+}
+
+QTcpSocket* InitDialog::getSocketTwo() const {
+    return socketTwo;
 }

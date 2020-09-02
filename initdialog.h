@@ -4,10 +4,12 @@
 #include "assist.h"
 #include <chrono>
 #include <thread>
+#include <tuple>
 #include <QDebug>
 #include <QDialog>
 #include <QTcpServer>
 #include <QTcpSocket>
+using std::tuple;
 
 namespace Ui {
 class InitDialog;
@@ -42,6 +44,14 @@ private:
     void handleA();
     void handleB();
     void handleC();
+
+public:
+    PlayerType getPlayerType() const;
+    QTcpSocket* getConnectionAB() const;
+    QTcpSocket* getConnectionAC() const;
+    QTcpSocket* getConnectionBC() const;
+    QTcpSocket* getSocketOne() const;
+    QTcpSocket* getSocketTwo() const;
 };
 
 #endif // INITDIALOG_H

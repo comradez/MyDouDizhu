@@ -2,7 +2,9 @@
 #define CARD_H
 
 #include "assist.h"
+#include <QWidget>
 #include <QString>
+#include <QStringList>
 #include <QPair>
 
 class Card {
@@ -14,6 +16,7 @@ private:
 
 public:
     Card(CardKind _cardKind, CardSize _cardSize);
+    Card(QString _message);
     CardKind getCardKind() const;
     CardSize getCardSize() const;
     QPair<CardKind,CardSize> getCard() const;
@@ -23,6 +26,7 @@ public:
     bool operator<(const Card& b) const {
         return int(cardSize) < int(b.cardSize);
     }
+    QString toString() const;
 };
 
 uint qHash(const Card& card);

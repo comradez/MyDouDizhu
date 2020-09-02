@@ -15,7 +15,9 @@ class Player : public QObject {
 private:
     typedef Assist::CardCombo CardCombo;
     typedef Assist::CardSize CardSize;
+    typedef Assist::PlayerType PlayerType;
     typedef bool(*fbool)();
+    PlayerType type;
     bool landLord;
     QSet<Card> hand;
     QList<Card> cardsChosen;
@@ -76,6 +78,10 @@ public:
     void addCard(const Card& card);
     void setLandLord();
     bool isLandLord() const;
+
+    void setType(PlayerType _type);
+    PlayerType getType() const;
+
     CardCombo checkCards();
 
     //QList<Card>& expose();

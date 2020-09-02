@@ -2,10 +2,10 @@
 #define ASSIST_H
 class Assist {
     enum class PlayerType {
-        A, B, C, None
+        A, B, C
     };
     enum class CardKind {
-        Spade, Heart, Diamond, Club //黑桃，红桃，方块，梅花
+        Spade, Heart, Diamond, Club, Joker //黑桃，红桃，方块，梅花
     };
     enum CardSize {
         Three = 3, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King, One, Two, SmallJoker, BigJoker
@@ -18,6 +18,8 @@ class Assist {
     friend class Player;
     friend class MainWindow;
     friend class InitDialog;
+    friend class Controller;
+    friend class GlobalController;
 };
 
 #endif // ASSIST_H

@@ -17,7 +17,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     card.cpp \
-    controller.cpp \
     initdialog.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -26,7 +25,6 @@ SOURCES += \
 HEADERS += \
     assist.h \
     card.h \
-    controller.h \
     initdialog.h \
     mainwindow.h \
     player.h
