@@ -32,23 +32,28 @@ MainWindow::MainWindow(QWidget *parent)
             landlordCards.insert(*globalDeck.begin());
             globalDeck.erase(globalDeck.begin());
         } //留出三张地主牌
+        QString cardB, cardC;
         for (int i = 0; i < 17; i++) {
             player->addCard(*globalDeck.begin());
             globalDeck.erase(globalDeck.begin());
-            sendToB(globalDeck.begin()->toString());
+            cardB += globalDeck.begin()->toString();
+            //sendToB(globalDeck.begin()->toString().toUtf8());
             globalDeck.erase(globalDeck.begin());
-            sendToC(globalDeck.begin()->toString());
+            cardC += globalDeck.begin()->toString();
+            //sendToC(globalDeck.begin()->toString().toUtf8());
             globalDeck.erase(globalDeck.begin());
         } //发掉剩余51张牌
+        sendToB(cardB.toUtf8());
+        sendToC(cardC.toUtf8());
         qDebug() << "checkpoint";
 
         int randPlayer = QRandomGenerator::global()->bounded(0, 3);
         if (randPlayer == 0) { //A最先叫地主
             paticipate(1, -1);
         } else if (randPlayer == 1) {
-            sendToB("paticipate");
+            sendToB(QString("paticipate").toUtf8());
         } else if (randPlayer == 2) {
-            sendToC("paticipate");
+            sendToC(QString("paticipate").toUtf8());
         }
     }
 }
@@ -75,7 +80,7 @@ void MainWindow::paticipate(int number, int current) {
         ui->pushButtonDecline->setEnabled(true);
         ui->pushButtonLandlord->setEnabled(true);
         connect(ui->pushButtonDecline, &QPushButton::clicked, [=](){
-            sendToNext(QString("landlord;3;%1").arg(current));
+            sendToNext(QString("landlord;3;%1").arg(current).toUtf8());
             ui->pushButtonDecline->setVisible(false);
             ui->pushButtonLandlord->setVisible(false);
         });
@@ -91,17 +96,17 @@ void MainWindow::paticipate(int number, int current) {
         ui->pushButtonLandlord->setEnabled(true);
         connect(ui->pushButtonDecline, &QPushButton::clicked, [=]() {
             if (current == 1 || current == -1) {
-                sendToRest(QString("chosen;%1").arg(int(nextOne())));
+                sendToRest(QString("chosen;%1").arg(int(nextOne())).toUtf8());
                 landlord = nextOne();
             } else {
-                sendToRest(QString("chosen;%1").arg(int(previousOne())));
+                sendToRest(QString("chosen;%1").arg(int(previousOne())).toUtf8());
                 landlord = previousOne();
             }
             ui->pushButtonDecline->setVisible(false);
             ui->pushButtonLandlord->setVisible(false);
         });
         connect(ui->pushButtonLandlord, &QPushButton::clicked, [=](){
-            sendToRest(QString("chosen;%1").arg(int(player->getType())));
+            sendToRest(QString("chosen;%1").arg(int(player->getType())).toUtf8());
             landlord = player->getType();
             ui->pushButtonDecline->setVisible(false);
             ui->pushButtonLandlord->setVisible(false);
@@ -114,68 +119,99 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::getDataFromDialog() {
-    if (player->getType() == PlayerType::A) {
-        connects[0] = nullptr;
-        connects[1] = inputDialog->getConnectionAB();
-        connects[2] = inputDialog->getConnectionAC();
-        disconnect(connects[1], 0, 0, 0);
-        disconnect(connects[2], 0, 0, 0);
-        connect(connects[1], &QTcpSocket::readyRead, this, &MainWindow::from);
-        connect(connects[2], &QTcpSocket::readyRead, this, &MainWindow::from);
-    } else if (player->getType() == PlayerType::B) {
-        connects[0] = inputDialog->getSocketOne();
-        connects[1] = nullptr;
-        connects[2] = inputDialog->getConnectionBC();
-        disconnect(connects[0], 0, 0, 0);
-        disconnect(connects[2], 0, 0, 0);
-        connect(connects[0], &QTcpSocket::readyRead, this, &MainWindow::from);
-        connect(connects[2], &QTcpSocket::readyRead, this, &MainWindow::from);
-    } else if (player->getType() == PlayerType::C) {
-        connects[0] = inputDialog->getSocketOne();
-        connects[1] = inputDialog->getSocketTwo();
-        connects[2] = nullptr;
-        disconnect(connects[0], 0, 0, 0);
-        disconnect(connects[1], 0, 0, 0);
-        connect(connects[0], &QTcpSocket::readyRead, this, &MainWindow::from);
-        connect(connects[1], &QTcpSocket::readyRead, this, &MainWindow::from);
+    switch (player->getType()) {
+        case (PlayerType::A): {
+            connects[0] = nullptr;
+            connects[1] = inputDialog->getConnectionAB();
+            connects[2] = inputDialog->getConnectionAC();
+            break;
+        }
+        case (PlayerType::B): {
+            connects[0] = inputDialog->getSocketOne();
+            connects[1] = nullptr;
+            connects[2] = inputDialog->getConnectionBC();
+            break;
+        }
+        case (PlayerType::C): {
+            connects[0] = inputDialog->getSocketOne();
+            connects[1] = inputDialog->getSocketTwo();
+            connects[2] = nullptr;
+            break;
+        }
     }
+    for (auto&& each : connects) {
+        if (each != nullptr) {
+            disconnect(each, 0, 0, 0);
+            connect(each, &QTcpSocket::readyRead, this, &MainWindow::readyRead);
+        }
+    }
+    connect(this, &MainWindow::readyRead, this, &MainWindow::handleRead);
 }
 
-void MainWindow::sendToA(QString message) {
-    connects[0]->write(message.toUtf8());
+QByteArray MainWindow::IntToArray(qint32 source) {
+    QByteArray temp;
+    QDataStream data(&temp, QIODevice::ReadWrite);
+    data << source;
+    return temp;
 }
 
-void MainWindow::sendToB(QString message) {
-    connects[1]->write(message.toUtf8());
-}
-
-void MainWindow::sendToC(QString message) {
-    connects[2]->write(message.toUtf8());
-}
-
-void MainWindow::sendToNext(QString message) {
-    if (player->getType() == PlayerType::A) {
-        sendToB(message);
-    } else if (player->getType() == PlayerType::B) {
-        sendToC(message);
+bool MainWindow::sendToA(QByteArray data) {
+    QTcpSocket* socket = connects[0];
+    if(socket->state() == QAbstractSocket::ConnectedState) {
+        socket->write(IntToArray(data.size()));
+        socket->write(data);
+        return socket->waitForBytesWritten();
     } else {
-        sendToA(message);
+        return false;
     }
 }
 
-void MainWindow::sendToPrevious(QString message) {
-    if (player->getType() == PlayerType::A) {
-        sendToC(message);
-    } else if (player->getType() == PlayerType::B) {
-        sendToA(message);
+bool MainWindow::sendToB(QByteArray data) {
+    QTcpSocket* socket = connects[1];
+    if(socket->state() == QAbstractSocket::ConnectedState) {
+        socket->write(IntToArray(data.size()));
+        socket->write(data);
+        return socket->waitForBytesWritten();
     } else {
-        sendToB(message);
+        return false;
     }
 }
 
-void MainWindow::sendToRest(QString message) {
-    sendToPrevious(message);
-    sendToNext(message);
+bool MainWindow::sendToC(QByteArray data) {
+    QTcpSocket* socket = connects[2];
+    if(socket->state() == QAbstractSocket::ConnectedState) {
+        socket->write(IntToArray(data.size()));
+        socket->write(data);
+        return socket->waitForBytesWritten();
+    } else {
+        return false;
+    }
+}
+
+bool MainWindow::sendToNext(QByteArray data) {
+    switch (player->getType()) {
+        case (PlayerType::A):
+            return sendToB(data);
+        case (PlayerType::B):
+            return sendToC(data);
+        case (PlayerType::C):
+            return sendToA(data);
+    } return false;
+}
+
+bool MainWindow::sendToPrevious(QByteArray data) {
+    switch (player->getType()) {
+        case (PlayerType::A):
+            return sendToC(data);
+        case (PlayerType::B):
+            return sendToA(data);
+        case (PlayerType::C):
+            return sendToB(data);
+    } return false;
+}
+
+bool MainWindow::sendToRest(QByteArray data) {
+    return sendToNext(data) && sendToPrevious(data);
 }
 
 Assist::PlayerType MainWindow::nextOne() const {
@@ -186,22 +222,40 @@ Assist::PlayerType MainWindow::previousOne() const {
     return PlayerType((int(player->getType()) + 2) % 3);
 }
 
-void MainWindow::from() {
-    QString message = connects[0]->readAll(); //我猜缓冲区被清空了
-    qDebug() << message;
-    //connects[0]->flush();
-    /*
-    可能接收到的信息:
-    paticipate 表示从我开始叫地主
-    landlord;num1;num2 表示我是第num1个叫地主的,最后一个叫过地主的人是num2
-    chosen;num 表示地主是num
-    */
-    QStringList attrList = message.split(";");
-    if (attrList[0] == "paticipate") {
-        paticipate(1, 1);
-    } else if (attrList[0] == "landlord") {
-        paticipate(attrList[1].toInt(), attrList[2].toInt());
-    } else if (attrList[0] == "chosen") {
-        landlord = PlayerType(attrList[1].toInt());
+void MainWindow::readyRead()
+{
+    QTcpSocket *socket = static_cast<QTcpSocket*>(sender());
+    QByteArray *buffer = buffers.value(socket);
+    qint32 *s = sizes.value(socket);
+    qint32 size = *s;
+    while (socket->bytesAvailable() > 0)
+    {
+        buffer->append(socket->readAll());
+        while ((size == 0 && buffer->size() >= 4) || (size > 0 && buffer->size() >= size))
+        {
+            if (size == 0 && buffer->size() >= 4)
+            {
+                size = ArrayToInt(buffer->mid(0, 4));
+                *s = size;
+                buffer->remove(0, 4);
+            }
+            if (size > 0 && buffer->size() >= size)
+            {
+                QByteArray data = buffer->mid(0, size);
+                buffer->remove(0, size);
+                size = 0;
+                *s = size;
+                emit dataReceived(data);
+            }
+        }
     }
 }
+
+qint32 MainWindow::ArrayToInt(QByteArray source)
+{
+    qint32 temp;
+    QDataStream data(&source, QIODevice::ReadWrite);
+    data >> temp;
+    return temp;
+}
+

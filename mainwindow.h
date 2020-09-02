@@ -40,20 +40,24 @@ private:
     QTcpSocket* connects[3];
 
     void getDataFromDialog();
-    void sendToA(QString message);
-    void sendToB(QString message);
-    void sendToC(QString message);
-    void sendToNext(QString message);
-    void sendToPrevious(QString message);
-    void sendToRest(QString message);
+    bool sendToA(QByteArray data);
+    bool sendToB(QByteArray data);
+    bool sendToC(QByteArray data);
+    bool sendToNext(QByteArray data);
+    bool sendToPrevious(QByteArray data);
+    bool sendToRest(QByteArray data);
     void paticipate(int number, int current);
-    void fromA();
-    void fromB();
-    void fromC();
-    void from();
+    QByteArray IntToArray(qint32 source);
+    qint32 ArrayToInt(QByteArray source);
+    void handleRead(QByteArray data);
+    void readyRead();
+
 
     PlayerType nextOne() const;
     PlayerType previousOne() const;
+
+    QHash<QTcpSocket*, QByteArray*> buffers;
+    QHash<QTcpSocket*, qint32*> sizes;
 
     PlayerType playerType;
     PlayerType landlord;
@@ -64,5 +68,7 @@ private:
     QTcpSocket* connectionAB;
     QTcpSocket* connectionBC;
     QTcpSocket* connectionAC;
+public: signals:
+    void dataReceived(QByteArray data);
 };
 #endif // MAINWINDOW_H
