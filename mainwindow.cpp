@@ -6,9 +6,11 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
     , player(new Player()) {
     ui->setupUi(this);
-    ui->graphicsView->setStyleSheet("background: transparent;border:0px");
+    //ui->graphicsView->setStyleSheet("background: transparent;border:0px");
     ui->pushButtonDecline->setVisible(false);
     ui->pushButtonLandlord->setVisible(false);
+
+    cardNum = cardNumNext = cardNumPrevious = 17;
 
     inputDialog = new InitDialog(this);
     inputDialog->exec();
@@ -25,23 +27,29 @@ MainWindow::MainWindow(QWidget *parent)
         globalDeck.push_back(Card(CardKind::Joker, CardSize::SmallJoker));
         globalDeck.push_back(Card(CardKind::Joker, CardSize::BigJoker));
         //放入54张牌
-        std::random_shuffle(globalDeck.begin(), globalDeck.end());
+
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(globalDeck.begin(), globalDeck.end(), g);
+
         //洗牌
-        for (int i = 0; i < 3; i++) {
-            landlordCards.insert(*globalDeck.begin());
-            globalDeck.erase(globalDeck.begin());
+        for (int i = 51; i < 54; i++) {
+            landlordCards.insert(globalDeck[i]);
         } //留出三张地主牌
-        QString cardB, cardC;
-        for (int i = 0; i < 17; i++) {
-            player->addCard(*globalDeck.begin());
-            globalDeck.erase(globalDeck.begin());
-            cardB += globalDeck.begin()->toString();
-            globalDeck.erase(globalDeck.begin());
-            cardC += globalDeck.begin()->toString();
-            globalDeck.erase(globalDeck.begin());
+        //画地主牌
+        QString cardB = "card;", cardC = "card;";
+        for (int i = 0; i < 51; i++) {
+            if (i % 3 == 0)
+                player->addCard(globalDeck[i]);
+            else if (i % 3 == 1)
+                cardB += globalDeck[i].toString();
+            else if (i % 3 == 2)
+                cardC += globalDeck[i].toString();
         } //发掉剩余51张牌
+        repaint();
         sendTo(1, cardB.toUtf8());
         sendTo(2, cardC.toUtf8());
+        //画自己的17张牌
         int randPlayer = QRandomGenerator::global()->bounded(0, 3);
         if (randPlayer == 0) { //A最先叫地主
             paticipate(1, -1);
@@ -53,6 +61,8 @@ MainWindow::MainWindow(QWidget *parent)
             qDebug() << "C";
             sendTo(2, QString("paticipate").toUtf8());
         }
+        repaint();
+        sendToRest("repaint");
     }
 }
 
@@ -93,19 +103,34 @@ void MainWindow::paticipate(int number, int current) {
         ui->pushButtonDecline->setEnabled(true);
         ui->pushButtonLandlord->setEnabled(true);
         connect(ui->pushButtonDecline, &QPushButton::clicked, [=]() {
+            QString cardLandlord = QString("card;");
+            for (const auto& each : landlordCards) {
+                cardLandlord += each.toString();
+            }
             if (current == 1 || current == -1) {
                 sendToRest(QString("chosen;%1").arg(int(nextOne())).toUtf8());
                 landlord = nextOne();
+                sendToNext(cardLandlord.toUtf8());
+                cardNumNext += 3;
+                sendToNext("repaint");
             } else {
                 sendToRest(QString("chosen;%1").arg(int(previousOne())).toUtf8());
                 landlord = previousOne();
+                sendToPrevious(cardLandlord.toUtf8());
+                cardNumPrevious += 3;
+                sendToPrevious("repaint");
             }
+            qDebug() << "landlord is " << int(landlord);
             ui->pushButtonDecline->setVisible(false);
             ui->pushButtonLandlord->setVisible(false);
         });
         connect(ui->pushButtonLandlord, &QPushButton::clicked, [=](){
             sendToRest(QString("chosen;%1").arg(int(player->getType())).toUtf8());
             landlord = player->getType();
+            qDebug() << "landlord is " << int(landlord);
+            for (auto&& each : landlordCards) {
+                player->addCard(each);
+            } repaint();
             ui->pushButtonDecline->setVisible(false);
             ui->pushButtonLandlord->setVisible(false);
         });
@@ -212,8 +237,42 @@ Assist::PlayerType MainWindow::previousOne() const {
     return PlayerType((int(player->getType()) + 2) % 3);
 }
 
+void MainWindow::paintEvent(QPaintEvent *ev) {
+    Q_UNUSED(ev);
+
+    QPainter painter(this);
+    QPixmap pixmap;
+    painter.translate(xpos, ypos);
+    int cnt = 0;
+    qDebug() << player->expose().size();
+    for (const auto& each : player->expose()) {
+        QPixmap pixmap;
+        QString fileName;
+        fileName += cardKinds[int(each.getCardKind())];
+        fileName += cardSizes[int(each.getCardSize())];
+        qDebug() << fileName;
+        pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
+        if (each.getChosen() == true) {
+            painter.drawPixmap(cnt, -40, pixmap);
+        } else {
+            painter.drawPixmap(cnt, 0, pixmap);
+        }
+        cnt += 40;
+    }
+}
+
+void MainWindow::mousePressEvent(QMouseEvent *ev) {
+    int x = ev->x() - xpos;
+    int y = ev->y() - ypos;
+    int cardHeight = 300;
+    if (y > 0 && y < cardHeight) {
+        int cx = x / 40;
+        player->toggleChosen(cx);
+        repaint();
+    }
+}
+
 void MainWindow::readyRead() {
-    qDebug() << "readyRead invoked!";
 
     QTcpSocket *socket = static_cast<QTcpSocket*>(sender());
     QByteArray *buffer = buffers.value(socket);
@@ -236,6 +295,7 @@ void MainWindow::readyRead() {
                 buffer->remove(0, size);
                 size = 0;
                 *s = size;
+                qDebug() << data;
                 emit dataReceived(data);
             }
         }
@@ -263,9 +323,21 @@ void MainWindow::handleRead(QByteArray data) {
     QStringList attrList = message.split(";");
     if (attrList[0] == "paticipate") {
         paticipate(1, 1);
+    } else if (attrList[0] == "repaint") {
+        repaint();
     } else if (attrList[0] == "landlord") {
         paticipate(attrList[1].toInt(), attrList[2].toInt());
     } else if (attrList[0] == "chosen") {
         landlord = PlayerType(attrList[1].toInt());
+        qDebug() << "landlord is " << int(landlord);
+    } else if (attrList[0] == "card") {
+        int cnt = 0;
+        for (const auto& each : attrList) {
+            cnt++;
+            if (each != "" && each != "card") {
+                player->addCard(Card(each));
+            }
+        } qDebug() << cnt;
+        repaint();
     }
 }

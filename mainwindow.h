@@ -5,9 +5,12 @@
 #include "player.h"
 #include "initdialog.h"
 #include "controller.h"
+#include <random>
 #include <QMainWindow>
 #include <QRandomGenerator>
 #include <QDebug>
+#include <QPainter>
+#include <QPixmap>
 #include <QTcpServer>
 #include <QTcpSocket>
 
@@ -32,11 +35,19 @@ private:
     InitDialog* inputDialog;
     Player* player;
     PlayerType landlord;
+    int cardNumPrevious, cardNumNext, cardNum;
+    const int xpos = 70, ypos = 370;
+    void paintEvent(QPaintEvent* ev) override;
+    void mousePressEvent(QMouseEvent* ev) override;
 
     std::vector<Card> globalDeck;
     std::set<Card> landlordCards;
 
     QTcpSocket* connects[3];
+
+    QString cardKinds[5] = {"S", "H", "D", "C", "J"};
+    QString cardSizes[18] = {"-1", "-1", "-1", "3", "4", "5", "6", "7", "8",
+                           "9", "10", "J", "Q", "K", "A", "2", "small", "big"};
 
     void getDataFromDialog();
     bool sendTo(int dst, QByteArray data);
@@ -48,7 +59,6 @@ private:
     qint32 ArrayToInt(QByteArray source);
     void handleRead(QByteArray data);
     void readyRead();
-
 
     PlayerType nextOne() const;
     PlayerType previousOne() const;

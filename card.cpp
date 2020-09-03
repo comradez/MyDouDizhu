@@ -4,9 +4,10 @@ Card::Card(CardKind _cardKind, CardSize _cardSize)
     : cardKind(_cardKind), cardSize(_cardSize) {}
 
 Card::Card(QString _message) {
-    QStringList stringList = _message.split(";");
+    QStringList stringList = _message.split(",");
     cardKind = CardKind(stringList[0].toInt());
     cardSize = CardSize(stringList[1].toInt());
+    qDebug() << (int)cardKind << (int)cardSize;
 }
 
 Assist::CardKind Card::getCardKind() const {
@@ -26,5 +27,17 @@ uint qHash(const Card& card) {
 }
 
 QString Card::toString() const {
-    return QString("%1;%2").arg((int)cardKind).arg((int)cardSize);
+    return QString("%1,%2;").arg((int)cardKind).arg((int)cardSize);
+}
+
+void Card::setChosen(bool _chosen) {
+    chosen = _chosen;
+}
+
+bool Card::getChosen() const {
+    return chosen;
+}
+
+void Card::show() const {
+    qDebug() << "This is a card:" << (int)cardKind << (int)cardSize;
 }

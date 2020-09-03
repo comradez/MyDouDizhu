@@ -6,6 +6,7 @@
 #include <QString>
 #include <QStringList>
 #include <QPair>
+#include <QDebug>
 
 class Card {
 private:
@@ -13,7 +14,7 @@ private:
     typedef Assist::CardSize CardSize;
     CardKind cardKind;
     CardSize cardSize;
-
+    bool chosen;
 public:
     Card(CardKind _cardKind, CardSize _cardSize);
     Card(QString _message);
@@ -24,8 +25,15 @@ public:
         return cardKind == b.cardKind && cardSize == b.cardSize;
     }
     bool operator<(const Card& b) const {
-        return int(cardSize) < int(b.cardSize);
+        if(int(cardSize) < int(b.cardSize)) {
+            return true;
+        } else if (int(cardSize) > int(b.cardSize)) {
+            return false;
+        } else return int(cardKind) < int(cardKind);
     }
+    void setChosen(bool _chosen);
+    bool getChosen() const;
+    void show() const;
     QString toString() const;
 };
 

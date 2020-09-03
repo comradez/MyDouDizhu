@@ -6,7 +6,7 @@ Player::Player()
     assistVector.resize(18);
 }
 
-void Player::addCard(const Card &card) {
+void Player::addCard(const Card& card) {
     hand.insert(card);
 }
 
@@ -119,8 +119,26 @@ bool Player::checkContinousPair() const {
     } return false;
 }
 
+void Player::toggleChosen(int pos) {
+    auto it = hand.begin();
+    while (pos--) {
+        it++;
+    } Card tempCard = *it;
+    it->show();
+    if (it->getChosen() == false)
+        tempCard.setChosen(true);
+    else
+        tempCard.setChosen(false);
+    hand.erase(it);
+    hand.insert(tempCard);
+}
+
 void Player::setType(PlayerType _type) {
     type = _type;
+}
+
+const std::set<Card>& Player::expose() const {
+    return hand;
 }
 
 Assist::PlayerType Player::getType() const {

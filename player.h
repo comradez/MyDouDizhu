@@ -3,6 +3,7 @@
 
 #include "card.h"
 #include <QObject>
+#include <set>
 #include <algorithm>
 #include <functional>
 #include <utility>
@@ -19,7 +20,8 @@ private:
     typedef bool(*fbool)();
     PlayerType type;
     bool landLord;
-    QSet<Card> hand;
+    std::multiset<Card> hand;
+    //std::vector<bool> handChosen;
     QList<Card> cardsChosen;
     QVector<int> assistVector;
     bool (Player::*checkers[15])() const = {
@@ -78,6 +80,8 @@ public:
     void addCard(const Card& card);
     void setLandLord();
     bool isLandLord() const;
+    const std::multiset<Card>& expose() const;
+    void toggleChosen(int pos);
 
     void setType(PlayerType _type);
     PlayerType getType() const;
