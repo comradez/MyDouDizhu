@@ -5,6 +5,7 @@
 #include "player.h"
 #include "initdialog.h"
 #include "controller.h"
+#include "comparer.h"
 #include <random>
 #include <QMainWindow>
 #include <QRandomGenerator>
@@ -39,9 +40,12 @@ private:
     const int xpos = 70, ypos = 370;
     void paintEvent(QPaintEvent* ev) override;
     void mousePressEvent(QMouseEvent* ev) override;
+    PlayerType lastPlayer;
+    QList<Card> previousCombo;
+    CardCombo previousComboType;
 
     std::vector<Card> globalDeck;
-    std::set<Card> landlordCards;
+    std::vector<Card> landlordCards;
 
     QTcpSocket* connects[3];
 
@@ -59,6 +63,10 @@ private:
     qint32 ArrayToInt(QByteArray source);
     void handleRead(QByteArray data);
     void readyRead();
+    void handleSkip();
+    void handlePlay();
+    void start();
+    void init();
 
     PlayerType nextOne() const;
     PlayerType previousOne() const;

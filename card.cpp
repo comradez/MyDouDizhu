@@ -1,13 +1,15 @@
 #include "card.h"
 
 Card::Card(CardKind _cardKind, CardSize _cardSize)
-    : cardKind(_cardKind), cardSize(_cardSize) {}
+    : cardKind(_cardKind), cardSize(_cardSize) {
+    chosen = false;
+}
 
 Card::Card(QString _message) {
     QStringList stringList = _message.split(",");
     cardKind = CardKind(stringList[0].toInt());
     cardSize = CardSize(stringList[1].toInt());
-    qDebug() << (int)cardKind << (int)cardSize;
+    chosen = false;
 }
 
 Assist::CardKind Card::getCardKind() const {

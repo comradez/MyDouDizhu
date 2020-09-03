@@ -35,7 +35,6 @@ InitDialog::InitDialog(QWidget *parent) :
         ui->lineEditB->setDisabled(false);
     });
     connect(ui->pushButton, &QPushButton::clicked, this, &InitDialog::startMatching);
-    //connect(ui->pushButton, &QPushButton::click, this, &InitDialog::startMatch);
 }
 
 
@@ -105,8 +104,6 @@ void InitDialog::handleA() {
                 startGame();
                 connectionAC->write("Startgame");
                 connectionAC->flush();
-                //disconnect(connectionAB, 0, 0, 0);
-                //disconnect(connectionAC, 0, 0, 0);
             }
         });
     }
@@ -121,8 +118,6 @@ void InitDialog::handleB() {
                 socketOne->write("B is ready!");
             } else if (byteArray == "Startgame") {
                 startGame();
-                //disconnect(connectionBC, 0, 0, 0);
-                //disconnect(socketOne, 0, 0, 0);
             }
         });
     }
@@ -136,14 +131,11 @@ void InitDialog::handleC() {
         socketTwo->write("Startgame");
         socketTwo->flush();
         startGame();
-        //disconnect(socketOne, 0, 0, 0);
-        //disconnect(socketTwo, 0, 0, 0);
     }
 }
 
 void InitDialog::startGame() {
     accept();
-    qDebug() << (int)currentType << "starts game!";
 }
 
 Assist::PlayerType InitDialog::getPlayerType() const {

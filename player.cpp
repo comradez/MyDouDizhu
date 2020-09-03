@@ -6,8 +6,9 @@ Player::Player()
     assistVector.resize(18);
 }
 
-void Player::addCard(const Card& card) {
-    hand.insert(card);
+void Player::addCard(Card card) {
+    hand.push_back(card);
+    sorted = false;
 }
 
 bool Player::checkSingle() const {
@@ -120,27 +121,52 @@ bool Player::checkContinousPair() const {
 }
 
 void Player::toggleChosen(int pos) {
-    auto it = hand.begin();
-    while (pos--) {
-        it++;
-    } Card tempCard = *it;
-    it->show();
-    if (it->getChosen() == false)
-        tempCard.setChosen(true);
-    else
-        tempCard.setChosen(false);
-    hand.erase(it);
-    hand.insert(tempCard);
+    if (hand[pos].getChosen() == true) {
+        hand[pos].setChosen(false);
+        for (auto it = cardsChosen.begin(); it != cardsChosen.end(); it++) {
+            if (*it == hand[pos]) {
+                cardsChosen.erase(it);
+                break; //在erase之后直接break是安全的
+            }
+        }
+    } else {
+        hand[pos].setChosen(true);
+        cardsChosen.push_back(hand[pos]);
+    }
+}
+
+Assist::CardCombo Player::checkCards() {
+    assistVector.clear();
+    assistVector.resize(18);
+    for (const auto& each : cardsChosen) {
+        assistVector[each.getCardSize()]++;
+    }
+    for (int i = 0; i < 15; i++) {
+        auto each = checkers[i];
+        if ((this->*each)()) {
+            qDebug() << (int)combos[i];
+            return combos[i];
+        }
+    }
+    return CardCombo::Illegal;
 }
 
 void Player::setType(PlayerType _type) {
     type = _type;
 }
 
-const std::set<Card>& Player::expose() const {
+const std::vector<Card>& Player::expose() {
+    if (sorted == false) {
+        std::stable_sort(hand.begin(), hand.end());
+        sorted = true;
+    }
     return hand;
 }
 
 Assist::PlayerType Player::getType() const {
     return type;
+}
+
+const QList<Card>& Player::getChosenCard() const {
+    return cardsChosen;
 }

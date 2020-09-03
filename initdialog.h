@@ -24,8 +24,6 @@ class InitDialog : public QDialog
 public:
     typedef Assist::PlayerType PlayerType;
     const int portAB = 60001, portAC = 60002, portBC = 60003;
-    //const int portBA = 60004, portCA = 60005, portCB = 60006;
-    //bool connectAB, connectBC, connectAC;
     PlayerType currentType;
     explicit InitDialog(QWidget *parent = nullptr);
     ~InitDialog();

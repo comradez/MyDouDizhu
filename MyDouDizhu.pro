@@ -18,6 +18,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     card.cpp \
     client.cpp \
+    comparer.cpp \
     initdialog.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -28,6 +29,7 @@ HEADERS += \
     assist.h \
     card.h \
     client.h \
+    comparer.h \
     initdialog.h \
     mainwindow.h \
     player.h \

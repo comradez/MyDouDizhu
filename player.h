@@ -14,13 +14,14 @@
 class Player : public QObject {
     Q_OBJECT
 private:
+    bool sorted = true;
     typedef Assist::CardCombo CardCombo;
     typedef Assist::CardSize CardSize;
     typedef Assist::PlayerType PlayerType;
     typedef bool(*fbool)();
     PlayerType type;
     bool landLord;
-    std::multiset<Card> hand;
+    std::vector<Card> hand;
     //std::vector<bool> handChosen;
     QList<Card> cardsChosen;
     QVector<int> assistVector;
@@ -77,14 +78,15 @@ private:
     bool checkContinousPair() const;
 public:
     Player();
-    void addCard(const Card& card);
+    void addCard(Card card);
     void setLandLord();
     bool isLandLord() const;
-    const std::multiset<Card>& expose() const;
+    const std::vector<Card>& expose();
     void toggleChosen(int pos);
 
     void setType(PlayerType _type);
     PlayerType getType() const;
+    const QList<Card>& getChosenCard() const;
 
     CardCombo checkCards();
 

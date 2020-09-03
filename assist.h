@@ -20,6 +20,7 @@ class Assist {
     friend class InitDialog;
     friend class Controller;
     friend class GlobalController;
+    friend class Comparer;
 };
 
 #endif // ASSIST_H
