@@ -36,8 +36,8 @@ private:
     InitDialog* inputDialog;
     Player* player;
     PlayerType landlord;
-    int cardNumPrevious, cardNumNext, cardNum;
-    const int xpos = 70, ypos = 370;
+    int cardNumPrevious, cardNumNext;
+    const int xpos = 70, ypos = 420, xcenter = 210, ycenter = 10;
     void paintEvent(QPaintEvent* ev) override;
     void mousePressEvent(QMouseEvent* ev) override;
     PlayerType lastPlayer;
@@ -65,14 +65,19 @@ private:
     void readyRead();
     void handleSkip();
     void handlePlay();
+    void handleQuit();
     void start();
     void init();
+    void reset();
+    void gameInit();
 
     PlayerType nextOne() const;
     PlayerType previousOne() const;
 
     QHash<QTcpSocket*, QByteArray*> buffers;
     QHash<QTcpSocket*, qint32*> sizes;
+    bool replay[3]{false};
+    bool readyB = false, readyC = false;
 public: signals:
     void dataReceived(QByteArray data);
 };

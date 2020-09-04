@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1111</width>
-    <height>759</height>
+    <width>1117</width>
+    <height>802</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,36 +17,66 @@
    <widget class="QPushButton" name="pushButtonLandlord">
     <property name="geometry">
      <rect>
-      <x>450</x>
-      <y>240</y>
+      <x>590</x>
+      <y>320</y>
       <width>89</width>
       <height>25</height>
      </rect>
     </property>
     <property name="text">
-     <string>+</string>
+     <string>Try</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButtonDecline">
     <property name="geometry">
      <rect>
-      <x>280</x>
-      <y>240</y>
+      <x>370</x>
+      <y>320</y>
       <width>89</width>
       <height>25</height>
      </rect>
     </property>
     <property name="text">
-     <string>-</string>
+     <string>Decline</string>
     </property>
    </widget>
    <widget class="QWidget" name="widget" native="true">
     <property name="geometry">
      <rect>
       <x>70</x>
-      <y>370</y>
-      <width>661</width>
-      <height>131</height>
+      <y>420</y>
+      <width>971</width>
+      <height>301</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QWidget" name="widget_2" native="true">
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>10</y>
+      <width>141</width>
+      <height>301</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="lcdPrevious">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>30</y>
+      <width>101</width>
+      <height>91</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="lcdNext">
+    <property name="geometry">
+     <rect>
+      <x>950</x>
+      <y>30</y>
+      <width>101</width>
+      <height>91</height>
      </rect>
     </property>
    </widget>
@@ -56,7 +86,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1111</width>
+     <width>1117</width>
      <height>28</height>
     </rect>
    </property>

@@ -6,60 +6,87 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
     , player(new Player()) {
     ui->setupUi(this);
-    //ui->graphicsView->setStyleSheet("background: transparent;border:0px");
-    ui->pushButtonDecline->setVisible(false);
-    ui->pushButtonLandlord->setVisible(false);
-
-    cardNum = cardNumNext = cardNumPrevious = 17;
-
+    ui->pushButtonDecline->setEnabled(false);
+    ui->pushButtonLandlord->setEnabled(false);
+    cardNumNext = cardNumPrevious = 17;
+    ui->lcdNext->display(cardNumNext);
+    ui->lcdPrevious->display(cardNumPrevious);
     inputDialog = new InitDialog(this);
     inputDialog->exec();
     player->setType(inputDialog->getPlayerType());
     setWindowTitle(QString('A' + (int)player->getType()));
     getDataFromDialog();
     if (player->getType() == PlayerType::A) {
-        for (int i = CardSize::Three; i <= CardSize::Two; i++) {
-            for (int j = (int)CardKind::Spade; j <= (int)CardKind::Club; j++) {
-                globalDeck.push_back(Card(CardKind(j), CardSize(i)));
-            }
-        }
-        globalDeck.push_back(Card(CardKind::Joker, CardSize::SmallJoker));
-        globalDeck.push_back(Card(CardKind::Joker, CardSize::BigJoker));
-        //放入54张牌
-
-        std::random_device rd;
-        std::mt19937 g(rd());
-        std::shuffle(globalDeck.begin(), globalDeck.end(), g);
-
-        //洗牌
-        for (int i = 51; i < 54; i++) {
-            landlordCards.push_back(globalDeck[i]);
-        } //留出三张地主牌
-        //画地主牌
-        QString cardB = "card;", cardC = "card;";
-        for (int i = 0; i < 51; i++) {
-            if (i % 3 == 0)
-                player->addCard(globalDeck[i]);
-            else if (i % 3 == 1)
-                cardB += globalDeck[i].toString();
-            else if (i % 3 == 2)
-                cardC += globalDeck[i].toString();
-        } //发掉剩余51张牌
-        repaint();
-        sendTo(1, cardB.toUtf8());
-        sendTo(2, cardC.toUtf8());
-        //画自己的17张牌
-        int randPlayer = QRandomGenerator::global()->bounded(0, 3);
-        if (randPlayer == 0) { //A最先叫地主
-            paticipate(1, -1);
-        } else if (randPlayer == 1) {
-            sendTo(1, QString("paticipate").toUtf8());
-        } else if (randPlayer == 2) {
-            sendTo(2, QString("paticipate").toUtf8());
-        }
-        repaint();
-        sendToRest("repaint");
+        gameInit();
     }
+}
+
+void MainWindow::gameInit() {
+    for (int i = CardSize::Three; i <= CardSize::Two; i++) {
+        for (int j = (int)CardKind::Spade; j <= (int)CardKind::Club; j++) {
+            globalDeck.push_back(Card(CardKind(j), CardSize(i)));
+        }
+    }
+    globalDeck.push_back(Card(CardKind::Joker, CardSize::SmallJoker));
+    globalDeck.push_back(Card(CardKind::Joker, CardSize::BigJoker));
+    //放入54张牌
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(globalDeck.begin(), globalDeck.end(), g);
+
+    //洗牌
+    for (int i = 51; i < 54; i++) {
+        landlordCards.push_back(globalDeck[i]);
+        sendToRest(("landlordcard;" + globalDeck[i].toString()).toUtf8());
+    } //留出三张地主牌
+    //画地主牌
+    QString cardB = "card;", cardC = "card;";
+    for (int i = 0; i < 51; i++) {
+        if (i % 3 == 0)
+            player->addCard(globalDeck[i]);
+        else if (i % 3 == 1)
+            cardB += globalDeck[i].toString();
+        else if (i % 3 == 2)
+            cardC += globalDeck[i].toString();
+    } //发掉剩余51张牌
+    repaint();
+    sendTo(1, cardB.toUtf8());
+    sendTo(2, cardC.toUtf8());
+    //画自己的17张牌
+    int randPlayer = QRandomGenerator::global()->bounded(0, 3);
+    if (randPlayer == 0) { //A最先叫地主
+        paticipate(1, -1);
+    } else if (randPlayer == 1) {
+        sendTo(1, QString("paticipate").toUtf8());
+    } else if (randPlayer == 2) {
+        sendTo(2, QString("paticipate").toUtf8());
+    }
+    repaint();
+    sendToRest("repaint");
+}
+
+void MainWindow::reset() {
+    player->clearCardsChosen();
+    player->reset();
+    lastPlayer = PlayerType::A;
+    previousCombo.clear();
+    landlordCards.clear();
+    globalDeck.clear();
+    previousComboType = CardCombo::Illegal;
+    cardNumPrevious = cardNumNext = 17;
+    ui->lcdNext->display(cardNumNext);
+    ui->lcdPrevious->display(cardNumPrevious);
+    ui->pushButtonDecline->setEnabled(false);
+    ui->pushButtonLandlord->setEnabled(false);
+    ui->pushButtonDecline->setText("Decline");
+    ui->pushButtonLandlord->setText("Try");
+    disconnect(ui->pushButtonDecline, 0, 0, 0);
+    disconnect(ui->pushButtonLandlord, 0, 0, 0);
+    qDebug() << (int)player->getType() << "reset";
+    if (player->getType() != PlayerType::A) {
+        sendTo(0, ("complete;" + QString::number((int)player->getType())).toUtf8());
+    } repaint();
 }
 
 void MainWindow::paticipate(int number, int current) {
@@ -108,6 +135,7 @@ void MainWindow::paticipate(int number, int current) {
                 landlord = nextOne();
                 sendToNext(cardLandlord.toUtf8());
                 cardNumNext += 3;
+                ui->lcdNext->display(cardNumNext);
                 sendToNext("repaint");
                 sendToRest("init");
                 sendToNext("start");
@@ -116,6 +144,7 @@ void MainWindow::paticipate(int number, int current) {
                 landlord = previousOne();
                 sendToPrevious(cardLandlord.toUtf8());
                 cardNumPrevious += 3;
+                ui->lcdPrevious->display(cardNumPrevious);
                 sendToPrevious("repaint");
                 sendToRest("init");
                 sendToPrevious("start");
@@ -181,6 +210,7 @@ void MainWindow::getDataFromDialog() {
         if (each != nullptr) {
             disconnect(each, 0, 0, 0);
             connect(each, &QTcpSocket::readyRead, this, &MainWindow::readyRead);
+            connect(each, &QTcpSocket::disconnected, this, &MainWindow::handleQuit);
         }
     }
     connect(this, &MainWindow::dataReceived, this, &MainWindow::handleRead);
@@ -242,6 +272,7 @@ void MainWindow::paintEvent(QPaintEvent *ev) {
     Q_UNUSED(ev);
 
     QPainter painter(this);
+    painter.save();
     QPixmap pixmap;
     painter.translate(xpos, ypos);
     int cnt = 0;
@@ -256,6 +287,18 @@ void MainWindow::paintEvent(QPaintEvent *ev) {
         } else {
             painter.drawPixmap(cnt, 0, pixmap);
         }
+        cnt += 40;
+    }
+    cnt = 0;
+    painter.restore();
+    painter.translate(xcenter, ycenter);
+    for (const auto& each : previousCombo) {
+        QPixmap pixmap;
+        QString fileName;
+        fileName += cardKinds[int(each.getCardKind())];
+        fileName += cardSizes[int(each.getCardSize())];
+        pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
+        painter.drawPixmap(cnt, 0, pixmap);
         cnt += 40;
     }
 }
@@ -325,6 +368,10 @@ qint32 MainWindow::ArrayToInt(QByteArray source)
 void MainWindow::handleRead(QByteArray data) {
     QString message = QString(data);
     QStringList attrList = message.split(";");
+    if (attrList.size() == 0) {
+        qDebug() << "Empty message got!";
+        return;
+    }
     if (attrList[0] == "paticipate") {
         paticipate(1, 1);
     } else if (attrList[0] == "repaint") {
@@ -333,6 +380,14 @@ void MainWindow::handleRead(QByteArray data) {
         paticipate(attrList[1].toInt(), attrList[2].toInt());
     } else if (attrList[0] == "chosen") {
         landlord = PlayerType(attrList[1].toInt());
+        if (landlord == nextOne()) {
+            cardNumNext += 3;
+            ui->lcdNext->display(cardNumNext);
+        } else if (landlord == previousOne()) {
+            cardNumPrevious += 3;
+            ui->lcdPrevious->display(cardNumPrevious);
+        }
+        qDebug() << (int)landlord;
     } else if (attrList[0] == "card") {
         int cnt = 0;
         for (const auto& each : attrList) {
@@ -346,17 +401,60 @@ void MainWindow::handleRead(QByteArray data) {
         init();
     } else if (attrList[0] == "start") {
         start();
-    } else if (attrList[0] == "previous") {
+    } else if (attrList[0] == "previous") { //上家出牌
+        previousCombo.clear();
         int pos = attrList.indexOf("type");
         for (int i = 1; i < pos; i++) {
             previousCombo.push_back(Card(attrList[i]));
-            qDebug() << attrList[i];
+            //qDebug() << attrList[i];
         }
         previousComboType = (CardCombo)attrList[pos + 1].toInt();
         lastPlayer = (PlayerType)attrList[pos + 3].toInt();
+        cardNumPrevious -= previousCombo.size();
+        ui->lcdPrevious->display(cardNumPrevious);
         qDebug() << (int)previousComboType << (int)lastPlayer;
+        repaint();
         ui->pushButtonDecline->setEnabled(true);
         ui->pushButtonLandlord->setEnabled(true);
+    } else if (attrList[0] == "doubleprevious") { //下家出牌,此时我只关心他出了什么牌
+        //可以直接放进previousCombo用来显示
+        previousCombo.clear();
+        for (const auto& each : attrList) {
+            if (each != "doubleprevious" && each != "") {
+                qDebug() << each;
+                previousCombo.push_back(Card(each));
+            }
+        }
+        cardNumNext -= previousCombo.size();
+        ui->lcdNext->display(cardNumNext);
+        repaint();
+    } else if (attrList[0] == "winner") {
+        PlayerType winner = (PlayerType)attrList[1].toInt();
+        QMessageBox::StandardButton ret;
+        QString text = QString(landlord == winner ? "The landlord wins!" : "The peasants win!") + " Play again?";
+        ret = QMessageBox::information(this, "Game Finished!", text, QMessageBox::Ok | QMessageBox::No);
+        if (ret == QMessageBox::Ok) { //重新开始
+            replay[(int)player->getType()] = true;
+            sendToRest(("replay;" + QString::number((int)player->getType())).toUtf8());
+        } else { //退出
+            handleQuit();
+        }
+    } else if (attrList[0] == "replay") {
+        replay[attrList[1].toInt()] = true;
+        if (replay[0] && replay[1] && replay[2]) { //三人都决定重新开始
+            reset();
+        }
+    } else if (attrList[0] == "complete") { //要发送给A的"我准备好重新开始了"
+        if (attrList[1].toInt() == 1) {
+            readyB = true;
+        } else if (attrList[1].toInt() == 2) {
+            readyC = true;
+        }
+        if (readyB && readyC && player->getType() == PlayerType::A) {
+            gameInit();
+        }
+    } else if (attrList[0] == "landlordcard") {
+        landlordCards.push_back(Card(attrList[1]));
     }
 }
 
@@ -382,12 +480,16 @@ void MainWindow::start() {
 
 void MainWindow::handleSkip() {
     //直接把上家出的牌、对应的类型和最后一个出过牌的人发给下家
-    QString message = "previous;";
+    QString message = "";
     for (const auto& each : previousCombo) {
         message += each.toString();
     } message += ("type;" + QString::number((int)previousComboType) + ";");
     message += ("last;" + QString::number((int)lastPlayer));
-    sendToNext(message.toUtf8());
+    sendToNext(QString("previous;" + message).toUtf8());
+    //因为我这次没有出牌而上家的previousCombo还是他自己出的那些牌,所以其实不用sendToPrevious
+    ui->pushButtonDecline->setEnabled(false);
+    ui->pushButtonLandlord->setEnabled(false);
+    player->clearCardsChosen();
 } //
 
 void MainWindow::handlePlay() { //
@@ -397,34 +499,54 @@ void MainWindow::handlePlay() { //
     * 并且把这个牌组合、它对应的类型和最后一个出过牌的人(就是自己)
     * 发给下家
     */
-    QString message = "previous;";
+    QString message = "";
     CardCombo chosenCardCombo = player->checkCards();
+    Comparer checkGreater;
+    auto chosenCard = player->getChosenCard();
     if (chosenCardCombo != CardCombo::Illegal) { //合法
-        if (chosenCardCombo == previousComboType) { //和上家出牌类型一致
-            Comparer checkGreater;
-            if (checkGreater(player->getChosenCard(), previousCombo, chosenCardCombo)) {
-                //可以出牌
-                for (const auto& each : player->getChosenCard()) {
-                    message += each.toString();
-                } message += ("type;" + QString::number((int)chosenCardCombo) + ";");
-                message += ("last;" + QString::number((int)player->getType()));
-                sendToNext(message.toUtf8());
-                ui->pushButtonDecline->setEnabled(false);
-                ui->pushButtonLandlord->setEnabled(false);
-            }
-        } else if (previousComboType == CardCombo::Illegal || lastPlayer == player->getType()) {
-            //这是第一次出牌/上次出牌人是自己(把别人都压死了),可以不判断直接出牌
-            for (const auto& each : player->getChosenCard()) {
+        if (previousComboType == CardCombo::Illegal || lastPlayer == player->getType() ||
+            chosenCardCombo == CardCombo::SuperBomb ||
+            //第一次出牌 ||　上次是我出的牌（另两人都没出）|| 王炸是无条件满足的
+            (chosenCardCombo == previousComboType && checkGreater(chosenCard, previousCombo, chosenCardCombo)) ||
+            //我和上次出牌类型一致，而且更大（炸弹接炸弹算在这里面，炸弹的大小判断这里有了）
+            (chosenCardCombo == CardCombo::Bomb && previousComboType != CardCombo::SuperBomb)) {
+            //因为炸弹接炸弹会被判定为前一种,所以这里处理的是炸弹接除王炸以外的其他牌型
+            previousCombo.clear();
+            for (const auto& each : chosenCard) {
                 message += each.toString();
-            } message += ("type;" + QString::number((int)chosenCardCombo) + ";");
+                player->removeCard(each);
+                previousCombo.push_back(each);
+            }
+            sendToPrevious(QString("doubleprevious;" + message).toUtf8());
+            message += ("type;" + QString::number((int)chosenCardCombo) + ";");
             message += ("last;" + QString::number((int)player->getType()));
-            sendToNext(message.toUtf8());
+            sendToNext(QString("previous;" + message).toUtf8());
             ui->pushButtonDecline->setEnabled(false);
             ui->pushButtonLandlord->setEnabled(false);
+            if (player->expose().size() == 0) { //哈哈 俺赢啦
+                sendToRest(("winner;" + QString::number((int)player->getType())).toUtf8());
+                QString text = QString(player->getType() == landlord ? "The landlord wins!" : "The peasants win!") + " Play again?";
+                auto ret = QMessageBox::information(this, "Game Finished!", text, QMessageBox::Ok | QMessageBox::No);
+                if (ret == QMessageBox::Ok) { //重新开始
+                    replay[(int)player->getType()] = true;
+                    sendToRest(("replay;" + QString::number((int)player->getType())).toUtf8());
+                } else { //退出
+                    handleQuit();
+                }
+            }
+            repaint();
         } else {
-            QMessageBox::warning(this, "Invalid", "This combo is invalid");
+            QMessageBox::warning(this, "Invalid", "This combo is yet also invalid");
         }
     } else {
         QMessageBox::warning(this, "Invalid", "This combo is invalid");
     }
+}
+
+void MainWindow::handleQuit() {
+    for (auto&& each : connects) {
+        if (each != nullptr) {
+            each->disconnectFromHost();
+        }
+    } close();
 }

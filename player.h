@@ -20,7 +20,6 @@ private:
     typedef Assist::PlayerType PlayerType;
     typedef bool(*fbool)();
     PlayerType type;
-    bool landLord;
     std::vector<Card> hand;
     //std::vector<bool> handChosen;
     QList<Card> cardsChosen;
@@ -79,14 +78,15 @@ private:
 public:
     Player();
     void addCard(Card card);
-    void setLandLord();
-    bool isLandLord() const;
     const std::vector<Card>& expose();
     void toggleChosen(int pos);
 
     void setType(PlayerType _type);
     PlayerType getType() const;
     const QList<Card>& getChosenCard() const;
+    void removeCard(const Card& card);
+    void clearCardsChosen();
+    void reset();
 
     CardCombo checkCards();
 

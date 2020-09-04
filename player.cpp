@@ -1,8 +1,6 @@
 #include "player.h"
 
-Player::Player()
-    : landLord(false)
-{
+Player::Player() {
     assistVector.resize(18);
 }
 
@@ -169,4 +167,25 @@ Assist::PlayerType Player::getType() const {
 
 const QList<Card>& Player::getChosenCard() const {
     return cardsChosen;
+}
+
+void Player::removeCard(const Card &card) {
+    cardsChosen.clear();
+    for (auto it = hand.begin(); it != hand.end(); it++) {
+        if (*it == card) {
+            hand.erase(it);
+            break;
+        }
+    }
+}
+
+void Player::clearCardsChosen() {
+    cardsChosen.clear();
+}
+
+void Player::reset() {
+    cardsChosen.clear();
+    assistVector.clear();
+    assistVector.resize(18);
+    hand.clear();
 }
