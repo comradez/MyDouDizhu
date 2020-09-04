@@ -31,7 +31,7 @@ public:
             } //全都一样的牌形,直接比较第一张即可(炸弹可以比大小)
             case (CardCombo::ThreeAndOne):
             case (CardCombo::ThreeAndPair):
-            case (CardCombo::FourAndPair):
+            //case (CardCombo::FourAndPair):
             case (CardCombo::FourAndTwo):
             case (CardCombo::FourAndTwoPairs): {
                 int moreA = bucketA.indexOf(3) == -1 ?

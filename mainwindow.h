@@ -9,6 +9,8 @@
 #include <random>
 #include <QMainWindow>
 #include <QRandomGenerator>
+#include <QMediaPlayer>
+#include <QMediaPlaylist>
 #include <QDebug>
 #include <QPainter>
 #include <QPixmap>
@@ -37,7 +39,8 @@ private:
     Player* player;
     PlayerType landlord;
     int cardNumPrevious, cardNumNext;
-    const int xpos = 70, ypos = 420, xcenter = 210, ycenter = 10;
+    const int xpos = 50, ypos = 500, xcenter = 250, ycenter = 150, xlandlord = 400, ylandlord = 20,
+              xprevious = 180, yprevious = 100, xnext = 1080, ynext = 100;
     void paintEvent(QPaintEvent* ev) override;
     void mousePressEvent(QMouseEvent* ev) override;
     PlayerType lastPlayer;
@@ -66,6 +69,7 @@ private:
     void handleSkip();
     void handlePlay();
     void handleQuit();
+    void handleStateChanged(QMediaPlayer::State state);
     void start();
     void init();
     void reset();
@@ -78,6 +82,10 @@ private:
     QHash<QTcpSocket*, qint32*> sizes;
     bool replay[3]{false};
     bool readyB = false, readyC = false;
+    bool landlordDecided = false;
+    QMediaPlaylist* playList;
+    QMediaPlayer* globalPlayer;
+    QMediaPlayer* winPlayer;
 public: signals:
     void dataReceived(QByteArray data);
 };

@@ -48,15 +48,12 @@ bool Player::checkThreeAndPair() const {
 }
 
 bool Player::checkFourAndTwo() const {
-    return assistVector.count(4) == 1 &&
-           assistVector.count(1) == 2 &&
-           assistVector.count(0) == 15;
-}
-
-bool Player::checkFourAndPair() const {
-    return assistVector.count(4) == 1 &&
-           assistVector.count(2) == 1 &&
-           assistVector.count(0) == 16;
+    return (assistVector.count(4) == 1 &&
+            assistVector.count(1) == 2 &&
+            assistVector.count(0) == 15) ||
+           (assistVector.count(4) == 1 &&
+            assistVector.count(2) == 1 &&
+            assistVector.count(0) == 16);
 }
 
 bool Player::checkFourAndTwoPairs() const {
@@ -107,14 +104,14 @@ bool Player::continous(int value, int times, const QVector<int>& paraVector, boo
 bool Player::checkContinous() const {
     int oneCount = assistVector.count(1);
     if (oneCount >= 5 && assistVector.count(0) == 18 - oneCount) {
-        return continous(1, oneCount, assistVector, false);
+        return continous(1, oneCount, assistVector, true);
     } return false;
 }
 
 bool Player::checkContinousPair() const {
     int twoCount = assistVector.count(2);
     if (twoCount >= 3 && assistVector.count(0) == 18 - twoCount) {
-        return continous(2, twoCount, assistVector, false);
+        return continous(2, twoCount, assistVector, true);
     } return false;
 }
 
@@ -139,7 +136,7 @@ Assist::CardCombo Player::checkCards() {
     for (const auto& each : cardsChosen) {
         assistVector[each.getCardSize()]++;
     }
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < 14; i++) {
         auto each = checkers[i];
         if ((this->*each)()) {
             qDebug() << (int)combos[i];

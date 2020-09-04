@@ -24,14 +24,14 @@ private:
     //std::vector<bool> handChosen;
     QList<Card> cardsChosen;
     QVector<int> assistVector;
-    bool (Player::*checkers[15])() const = {
+    bool (Player::*checkers[14])() const = {
         &Player::checkSingle,
         &Player::checkPair,
         &Player::checkThree,
         &Player::checkThreeAndOne,
         &Player::checkThreeAndPair,
         &Player::checkFourAndTwo,
-        &Player::checkFourAndPair,
+        //&Player::checkFourAndPair,
         &Player::checkFourAndTwoPairs,
         &Player::checkAero,
         &Player::checkAeroAndOne,
@@ -41,14 +41,14 @@ private:
         &Player::checkBomb,
         &Player::checkSuperBomb
     };
-    CardCombo combos[15] = {
+    CardCombo combos[14] = {
         CardCombo::Single,
         CardCombo::Pair,
         CardCombo::Three,
         CardCombo::ThreeAndOne,
         CardCombo::ThreeAndPair,
         CardCombo::FourAndTwo,
-        CardCombo::FourAndPair,
+        //CardCombo::FourAndPair,
         CardCombo::FourAndTwoPairs,
         CardCombo::Aero,
         CardCombo::AeroAndOne,

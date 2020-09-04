@@ -4,7 +4,10 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , player(new Player()) {
+    , player(new Player())
+    , playList(new QMediaPlaylist(this))
+    , globalPlayer(new QMediaPlayer(this))
+    , winPlayer(new QMediaPlayer(this)) {
     ui->setupUi(this);
     ui->pushButtonDecline->setEnabled(false);
     ui->pushButtonLandlord->setEnabled(false);
@@ -15,8 +18,18 @@ MainWindow::MainWindow(QWidget *parent)
     inputDialog->exec();
     player->setType(inputDialog->getPlayerType());
     setWindowTitle(QString('A' + (int)player->getType()));
+    ui->labelThis->setText("Player " + QString('A' + (int)player->getType()));
+    ui->labelPrevious->setText("Player " + QString('A' + ((int)player->getType() + 2) % 3));
+    ui->labelNext->setText("Player " + QString('A' + ((int)player->getType() + 1) % 3));
     getDataFromDialog();
     if (player->getType() == PlayerType::A) {
+        playList->addMedia(QMediaContent(QUrl("qrc:/audios/ BGM1.mp3")));
+        playList->addMedia(QMediaContent(QUrl("qrc:/audios/ BGM2.mp3")));
+        playList->addMedia(QMediaContent(QUrl("qrc:/audios/ BGM3.mp3")));
+        playList->setPlaybackMode(QMediaPlaylist::Random);
+        globalPlayer->setPlaylist(playList);
+        globalPlayer->play();
+        connect(winPlayer, &QMediaPlayer::stateChanged, this, &MainWindow::handleStateChanged);
         gameInit();
     }
 }
@@ -130,7 +143,10 @@ void MainWindow::paticipate(int number, int current) {
             for (const auto& each : landlordCards) {
                 cardLandlord += each.toString();
             }
+            ui->identityThis->setText("Peasant");
             if (current == 1 || current == -1) {
+                ui->identityNext->setText("Landlord");
+                ui->identityPrevious->setText("Peasant");
                 sendToRest(QString("chosen;%1").arg(int(nextOne())).toUtf8());
                 landlord = nextOne();
                 sendToNext(cardLandlord.toUtf8());
@@ -140,6 +156,8 @@ void MainWindow::paticipate(int number, int current) {
                 sendToRest("init");
                 sendToNext("start");
             } else {
+                ui->identityNext->setText("Peasant");
+                ui->identityPrevious->setText("Landlord");
                 sendToRest(QString("chosen;%1").arg(int(previousOne())).toUtf8());
                 landlord = previousOne();
                 sendToPrevious(cardLandlord.toUtf8());
@@ -148,7 +166,7 @@ void MainWindow::paticipate(int number, int current) {
                 sendToPrevious("repaint");
                 sendToRest("init");
                 sendToPrevious("start");
-            }
+            } landlordDecided = true;
             disconnect(ui->pushButtonDecline, 0, 0, 0);
             disconnect(ui->pushButtonLandlord, 0, 0, 0);
             init();
@@ -159,7 +177,10 @@ void MainWindow::paticipate(int number, int current) {
             landlord = player->getType();
             for (auto each : landlordCards) {
                 player->addCard(each);
-            }
+            } landlordDecided = true;
+            ui->identityThis->setText("Landlord");
+            ui->identityNext->setText("Peasant");
+            ui->identityPrevious->setText("Peasant");
             disconnect(ui->pushButtonDecline, 0, 0, 0);
             disconnect(ui->pushButtonLandlord, 0, 0, 0);
             init();
@@ -282,6 +303,7 @@ void MainWindow::paintEvent(QPaintEvent *ev) {
         fileName += cardKinds[int(each.getCardKind())];
         fileName += cardSizes[int(each.getCardSize())];
         pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
+        QPixmap scaledPixmap = pixmap.scaled(pixmap.size() * 0.6, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
         if (each.getChosen() == true) {
             painter.drawPixmap(cnt, -40, pixmap);
         } else {
@@ -291,6 +313,7 @@ void MainWindow::paintEvent(QPaintEvent *ev) {
     }
     cnt = 0;
     painter.restore();
+    painter.save();
     painter.translate(xcenter, ycenter);
     for (const auto& each : previousCombo) {
         QPixmap pixmap;
@@ -298,8 +321,46 @@ void MainWindow::paintEvent(QPaintEvent *ev) {
         fileName += cardKinds[int(each.getCardKind())];
         fileName += cardSizes[int(each.getCardSize())];
         pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
-        painter.drawPixmap(cnt, 0, pixmap);
+        QPixmap scaledPixmap = pixmap.scaled(pixmap.size() * 0.6, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        painter.drawPixmap(cnt, 0, scaledPixmap);
         cnt += 40;
+    }
+    cnt = 0;
+    painter.restore();
+    painter.save();
+    painter.translate(xlandlord, ylandlord);
+    for (const auto& each : landlordCards) {
+        QPixmap pixmap;
+        if (landlordDecided) {
+            QString fileName;
+            fileName += cardKinds[int(each.getCardKind())];
+            fileName += cardSizes[int(each.getCardSize())];
+            pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
+        } else {
+            pixmap.load("../MyDouDizhu/cards/PADDING.png");
+        }
+        QPixmap scaledPixmap = pixmap.scaled(pixmap.size() * 0.3, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        painter.drawPixmap(cnt, 0, scaledPixmap);
+        cnt += 60;
+    }
+    cnt = 0;
+    painter.restore();
+    painter.save();
+    painter.translate(xprevious, yprevious);
+    painter.rotate(90);
+    QPixmap padPixmap("../MyDouDizhu/cards/PADDING.png");
+    QPixmap scaledPadPixmap = padPixmap.scaled(padPixmap.size() * 0.5, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    for (int i = 0; i < cardNumPrevious; i++) {
+        painter.drawPixmap(cnt, 0, scaledPadPixmap);
+        cnt += 10;
+    }
+    cnt = 0;
+    painter.restore();
+    painter.translate(xnext, ynext);
+    painter.rotate(90);
+    for (int i = 0; i < cardNumNext; i++) {
+        painter.drawPixmap(cnt, 0, scaledPadPixmap);
+        cnt += 10;
     }
 }
 
@@ -380,13 +441,19 @@ void MainWindow::handleRead(QByteArray data) {
         paticipate(attrList[1].toInt(), attrList[2].toInt());
     } else if (attrList[0] == "chosen") {
         landlord = PlayerType(attrList[1].toInt());
+        ui->identityThis->setText("Peasant");
         if (landlord == nextOne()) {
             cardNumNext += 3;
             ui->lcdNext->display(cardNumNext);
+            ui->identityNext->setText("Landlord");
+            ui->identityPrevious->setText("Peasant");
         } else if (landlord == previousOne()) {
             cardNumPrevious += 3;
             ui->lcdPrevious->display(cardNumPrevious);
-        }
+            ui->identityNext->setText("Peasant");
+            ui->identityPrevious->setText("Landlord");
+        } landlordDecided = true;
+        repaint();
         qDebug() << (int)landlord;
     } else if (attrList[0] == "card") {
         int cnt = 0;
@@ -410,8 +477,10 @@ void MainWindow::handleRead(QByteArray data) {
         }
         previousComboType = (CardCombo)attrList[pos + 1].toInt();
         lastPlayer = (PlayerType)attrList[pos + 3].toInt();
-        cardNumPrevious -= previousCombo.size();
-        ui->lcdPrevious->display(cardNumPrevious);
+        if (attrList[pos + 4] == "played") {
+            cardNumPrevious -= previousCombo.size();
+            ui->lcdPrevious->display(cardNumPrevious);
+        }
         qDebug() << (int)previousComboType << (int)lastPlayer;
         repaint();
         ui->pushButtonDecline->setEnabled(true);
@@ -420,18 +489,30 @@ void MainWindow::handleRead(QByteArray data) {
         //可以直接放进previousCombo用来显示
         previousCombo.clear();
         for (const auto& each : attrList) {
-            if (each != "doubleprevious" && each != "") {
+            if (each != "doubleprevious" && each != "" && each != "played" && each != "skipped") {
                 qDebug() << each;
                 previousCombo.push_back(Card(each));
             }
         }
-        cardNumNext -= previousCombo.size();
-        ui->lcdNext->display(cardNumNext);
+        int pos = attrList.indexOf("skipped");
+        if (pos == -1) { //等于-1表示上家真的出牌了
+            cardNumNext -= previousCombo.size();
+            ui->lcdNext->display(cardNumNext);
+        }
         repaint();
     } else if (attrList[0] == "winner") {
         PlayerType winner = (PlayerType)attrList[1].toInt();
         QMessageBox::StandardButton ret;
         QString text = QString(landlord == winner ? "The landlord wins!" : "The peasants win!") + " Play again?";
+        if (player->getType() == PlayerType::A) {
+            globalPlayer->pause();
+        }
+        if (winner == player->getType()) {
+            winPlayer->setMedia(QUrl("qrc:/audios/victory.mp3"));
+        } else {
+            winPlayer->setMedia(QUrl("qrc:/audios/failure.mp3"));
+        }
+        winPlayer->play();
         ret = QMessageBox::information(this, "Game Finished!", text, QMessageBox::Ok | QMessageBox::No);
         if (ret == QMessageBox::Ok) { //重新开始
             replay[(int)player->getType()] = true;
@@ -485,7 +566,7 @@ void MainWindow::handleSkip() {
         message += each.toString();
     } message += ("type;" + QString::number((int)previousComboType) + ";");
     message += ("last;" + QString::number((int)lastPlayer));
-    sendToNext(QString("previous;" + message).toUtf8());
+    sendToNext(QString("previous;" + message + ";skipped").toUtf8());
     //因为我这次没有出牌而上家的previousCombo还是他自己出的那些牌,所以其实不用sendToPrevious
     ui->pushButtonDecline->setEnabled(false);
     ui->pushButtonLandlord->setEnabled(false);
@@ -517,14 +598,19 @@ void MainWindow::handlePlay() { //
                 player->removeCard(each);
                 previousCombo.push_back(each);
             }
-            sendToPrevious(QString("doubleprevious;" + message).toUtf8());
+            sendToPrevious(QString("doubleprevious;" + message + ";played").toUtf8());
             message += ("type;" + QString::number((int)chosenCardCombo) + ";");
             message += ("last;" + QString::number((int)player->getType()));
-            sendToNext(QString("previous;" + message).toUtf8());
+            sendToNext(QString("previous;" + message + ";played").toUtf8());
             ui->pushButtonDecline->setEnabled(false);
             ui->pushButtonLandlord->setEnabled(false);
             if (player->expose().size() == 0) { //哈哈 俺赢啦
                 sendToRest(("winner;" + QString::number((int)player->getType())).toUtf8());
+                if (player->getType() == PlayerType::A) {
+                    globalPlayer->pause();
+                }
+                winPlayer->setMedia(QUrl("qrc:/audios/victory.mp3"));
+                winPlayer->play();
                 QString text = QString(player->getType() == landlord ? "The landlord wins!" : "The peasants win!") + " Play again?";
                 auto ret = QMessageBox::information(this, "Game Finished!", text, QMessageBox::Ok | QMessageBox::No);
                 if (ret == QMessageBox::Ok) { //重新开始
@@ -549,4 +635,10 @@ void MainWindow::handleQuit() {
             each->disconnectFromHost();
         }
     } close();
+}
+
+void MainWindow::handleStateChanged(QMediaPlayer::State state) {
+    if (state == QMediaPlayer::StoppedState) {
+        globalPlayer->play();
+    }
 }
