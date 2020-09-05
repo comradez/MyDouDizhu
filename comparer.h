@@ -42,6 +42,7 @@ public:
             } // 3/31/32/411/42/422,比较多的那个即可(因为不可能重复)
             case (CardCombo::Aero):
             case (CardCombo::AeroAndOne):
+            case (CardCombo::AeroAndMulti):
             case (CardCombo::AeroAndPair): {
                 int moreA = -1, moreB = -1, cntA = 0, cntB = 0;
                 while (bucketA.indexOf(3, moreA + 1) != -1) {

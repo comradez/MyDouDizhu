@@ -78,6 +78,18 @@ bool Player::checkAeroAndOne() const {
     } return false;
 }
 
+bool Player::checkAeroAndMulti() const {
+    int threeCount = assistVector.count(3);
+    if (threeCount % 2 != 0) {
+        return false;
+    }
+    if (threeCount >= 2 &&
+        assistVector.count(2) == threeCount / 2 &&
+        assistVector.count(0) == 18 - threeCount - threeCount / 2) {
+        return continous(3, threeCount, assistVector, true);
+    } return false;
+}
+
 bool Player::checkAeroAndPair() const {
     int threeCount = assistVector.count(3);
     if (threeCount >= 2 &&
@@ -136,7 +148,7 @@ Assist::CardCombo Player::checkCards() {
     for (const auto& each : cardsChosen) {
         assistVector[each.getCardSize()]++;
     }
-    for (int i = 0; i < 14; i++) {
+    for (int i = 0; i < 15; i++) {
         auto each = checkers[i];
         if ((this->*each)()) {
             qDebug() << (int)combos[i];
