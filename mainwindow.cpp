@@ -375,8 +375,11 @@ void MainWindow::mousePressEvent(QMouseEvent *ev) {
         unsigned int cx = x / 40;
         if (cx >= player->expose().size() - 1 && cx <= player->expose().size() + 3) {
             cx = player->expose().size() - 1;
+        } else if (cx > player->expose().size() + 3) {
+            return;
         }
         player->toggleChosen(cx);
+        qDebug() << "clicked" << x << y << "and card number" << cx << " is toggled";
         repaint();
     }
 }
