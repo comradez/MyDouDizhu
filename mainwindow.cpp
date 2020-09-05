@@ -97,6 +97,8 @@ void MainWindow::reset() {
     disconnect(ui->pushButtonDecline, 0, 0, 0);
     disconnect(ui->pushButtonLandlord, 0, 0, 0);
     qDebug() << (int)player->getType() << "reset";
+    replay[0] = replay[1] = replay[2] = false;
+    readyB = readyC = false;
     if (player->getType() != PlayerType::A) {
         sendTo(0, ("complete;" + QString::number((int)player->getType())).toUtf8());
     } repaint();
@@ -369,9 +371,9 @@ void MainWindow::mousePressEvent(QMouseEvent *ev) {
     int y = ev->y() - ypos;
 
     int cardHeight = 300;
-    if (y > 0 && y < cardHeight) {
+    if (y > 0 && y < cardHeight && x > 0) {
         unsigned int cx = x / 40;
-        if (cx >= player->expose().size() - 1 && cx <= player->expose().size() + 4) {
+        if (cx >= player->expose().size() - 1 && cx <= player->expose().size() + 3) {
             cx = player->expose().size() - 1;
         }
         player->toggleChosen(cx);
@@ -441,18 +443,25 @@ void MainWindow::handleRead(QByteArray data) {
         paticipate(attrList[1].toInt(), attrList[2].toInt());
     } else if (attrList[0] == "chosen") {
         landlord = PlayerType(attrList[1].toInt());
-        ui->identityThis->setText("Peasant");
+        lastPlayer = landlord;
         if (landlord == nextOne()) {
             cardNumNext += 3;
             ui->lcdNext->display(cardNumNext);
+            ui->identityThis->setText("Peasant");
             ui->identityNext->setText("Landlord");
             ui->identityPrevious->setText("Peasant");
         } else if (landlord == previousOne()) {
             cardNumPrevious += 3;
             ui->lcdPrevious->display(cardNumPrevious);
+            ui->identityThis->setText("Peasant");
             ui->identityNext->setText("Peasant");
             ui->identityPrevious->setText("Landlord");
-        } landlordDecided = true;
+        } else {
+            ui->identityThis->setText("Landlord");
+            ui->identityNext->setText("Peasant");
+            ui->identityPrevious->setText("Peasant");
+        }
+        landlordDecided = true;
         repaint();
         qDebug() << (int)landlord;
     } else if (attrList[0] == "card") {
@@ -470,6 +479,7 @@ void MainWindow::handleRead(QByteArray data) {
         start();
     } else if (attrList[0] == "previous") { //上家出牌
         previousCombo.clear();
+        player->clearCardsChosen();
         int pos = attrList.indexOf("type");
         for (int i = 1; i < pos; i++) {
             previousCombo.push_back(Card(attrList[i]));
@@ -483,11 +493,15 @@ void MainWindow::handleRead(QByteArray data) {
         }
         qDebug() << (int)previousComboType << (int)lastPlayer;
         repaint();
-        ui->pushButtonDecline->setEnabled(true);
+        if (lastPlayer == player->getType() && attrList.indexOf("skipped") != -1)
+            ui->pushButtonDecline->setEnabled(false);
+        else
+            ui->pushButtonDecline->setEnabled(true);
         ui->pushButtonLandlord->setEnabled(true);
     } else if (attrList[0] == "doubleprevious") { //下家出牌,此时我只关心他出了什么牌
         //可以直接放进previousCombo用来显示
         previousCombo.clear();
+        player->clearCardsChosen();
         for (const auto& each : attrList) {
             if (each != "doubleprevious" && each != "" && each != "played" && each != "skipped") {
                 qDebug() << each;
@@ -584,6 +598,10 @@ void MainWindow::handlePlay() { //
     CardCombo chosenCardCombo = player->checkCards();
     Comparer checkGreater;
     auto chosenCard = player->getChosenCard();
+    QString debugMessage = "Cards chosen:";
+    for (const auto& each : chosenCard) {
+        debugMessage += each.toString();
+    } qDebug() << debugMessage;
     if (chosenCardCombo != CardCombo::Illegal) { //合法
         if (previousComboType == CardCombo::Illegal || lastPlayer == player->getType() ||
             chosenCardCombo == CardCombo::SuperBomb ||
@@ -593,6 +611,7 @@ void MainWindow::handlePlay() { //
             (chosenCardCombo == CardCombo::Bomb && previousComboType != CardCombo::SuperBomb)) {
             //因为炸弹接炸弹会被判定为前一种,所以这里处理的是炸弹接除王炸以外的其他牌型
             previousCombo.clear();
+            player->clearCardsChosen();
             for (const auto& each : chosenCard) {
                 message += each.toString();
                 player->removeCard(each);

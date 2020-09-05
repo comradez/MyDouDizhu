@@ -167,7 +167,14 @@ const QList<Card>& Player::getChosenCard() const {
 }
 
 void Player::removeCard(const Card &card) {
-    cardsChosen.clear();
+    for (auto it = cardsChosen.begin(); it != cardsChosen.end(); it++) {
+        if (*it == card) {
+            it->setChosen(false);
+            cardsChosen.erase(it);
+            break;
+        }
+    }
+    //cardsChosen.clear();
     for (auto it = hand.begin(); it != hand.end(); it++) {
         if (*it == card) {
             hand.erase(it);
