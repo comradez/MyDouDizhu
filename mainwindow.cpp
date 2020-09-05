@@ -34,6 +34,150 @@ MainWindow::MainWindow(QWidget *parent)
     }
 }
 
+MainWindow::~MainWindow() {
+    delete ui;
+}
+
+//-----重载的eventHandler-----
+
+void MainWindow::mousePressEvent(QMouseEvent *ev) {
+    int x = ev->x() - xpos;
+    int y = ev->y() - ypos;
+
+    int cardHeight = 300;
+    if (y > 0 && y < cardHeight && x > 0) {
+        unsigned int cx = x / 40;
+        if (cx >= player->expose().size() - 1 && cx <= player->expose().size() + 3) {
+            cx = player->expose().size() - 1;
+        } else if (cx > player->expose().size() + 3) {
+            return;
+        }
+        player->toggleChosen(cx);
+        qDebug() << "clicked" << x << y << "and card number" << cx << " is toggled";
+        repaint();
+    }
+}
+
+void MainWindow::paintEvent(QPaintEvent *ev) {
+    Q_UNUSED(ev);
+
+    QPainter painter(this);
+    painter.save();
+    QPixmap pixmap;
+    painter.translate(xpos, ypos);
+    int cnt = 0;
+    for (const auto& each : player->expose()) {
+        QPixmap pixmap;
+        QString fileName;
+        fileName += cardKinds[int(each.getCardKind())];
+        fileName += cardSizes[int(each.getCardSize())];
+        pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
+        QPixmap scaledPixmap = pixmap.scaled(pixmap.size() * 0.6, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        if (each.getChosen() == true) {
+            painter.drawPixmap(cnt, -40, pixmap);
+        } else {
+            painter.drawPixmap(cnt, 0, pixmap);
+        }
+        cnt += 40;
+    }
+    cnt = 0;
+    painter.restore();
+    painter.save();
+    painter.translate(xcenter, ycenter);
+    for (const auto& each : previousCombo) {
+        QPixmap pixmap;
+        QString fileName;
+        fileName += cardKinds[int(each.getCardKind())];
+        fileName += cardSizes[int(each.getCardSize())];
+        pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
+        QPixmap scaledPixmap = pixmap.scaled(pixmap.size() * 0.6, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        painter.drawPixmap(cnt, 0, scaledPixmap);
+        cnt += 40;
+    }
+    cnt = 0;
+    painter.restore();
+    painter.save();
+    painter.translate(xlandlord, ylandlord);
+    for (const auto& each : landlordCards) {
+        QPixmap pixmap;
+        if (landlordDecided) {
+            QString fileName;
+            fileName += cardKinds[int(each.getCardKind())];
+            fileName += cardSizes[int(each.getCardSize())];
+            pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
+        } else {
+            pixmap.load("../MyDouDizhu/cards/PADDING.png");
+        }
+        QPixmap scaledPixmap = pixmap.scaled(pixmap.size() * 0.3, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        painter.drawPixmap(cnt, 0, scaledPixmap);
+        cnt += 60;
+    }
+    cnt = 0;
+    painter.restore();
+    painter.save();
+    painter.translate(xprevious, yprevious);
+    painter.rotate(90);
+    QPixmap padPixmap("../MyDouDizhu/cards/PADDING.png");
+    QPixmap scaledPadPixmap = padPixmap.scaled(padPixmap.size() * 0.5, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    for (int i = 0; i < cardNumPrevious; i++) {
+        painter.drawPixmap(cnt, 0, scaledPadPixmap);
+        cnt += 10;
+    }
+    cnt = 0;
+    painter.restore();
+    painter.translate(xnext, ynext);
+    painter.rotate(90);
+    for (int i = 0; i < cardNumNext; i++) {
+        painter.drawPixmap(cnt, 0, scaledPadPixmap);
+        cnt += 10;
+    }
+}
+
+//-----准备函数和重置函数-----
+
+void MainWindow::getDataFromDialog() {
+    switch (player->getType()) {
+        case (PlayerType::A): {
+            connects[0] = nullptr;
+            connects[1] = inputDialog->getConnectionAB();
+            connects[2] = inputDialog->getConnectionAC();
+            buffers.insert(connects[1], new QByteArray());
+            sizes.insert(connects[1], new qint32(0));
+            buffers.insert(connects[2], new QByteArray());
+            sizes.insert(connects[2], new qint32(0));
+            break;
+        }
+        case (PlayerType::B): {
+            connects[0] = inputDialog->getSocketOne();
+            connects[1] = nullptr;
+            connects[2] = inputDialog->getConnectionBC();
+            buffers.insert(connects[0], new QByteArray());
+            sizes.insert(connects[0], new qint32(0));
+            buffers.insert(connects[2], new QByteArray());
+            sizes.insert(connects[2], new qint32(0));
+            break;
+        }
+        case (PlayerType::C): {
+            connects[0] = inputDialog->getSocketOne();
+            connects[1] = inputDialog->getSocketTwo();
+            connects[2] = nullptr;
+            buffers.insert(connects[0], new QByteArray());
+            sizes.insert(connects[0], new qint32(0));
+            buffers.insert(connects[1], new QByteArray());
+            sizes.insert(connects[1], new qint32(0));
+            break;
+        }
+    }
+    for (auto&& each : connects) {
+        if (each != nullptr) {
+            disconnect(each, 0, 0, 0);
+            connect(each, &QTcpSocket::readyRead, this, &MainWindow::readyRead);
+            connect(each, &QTcpSocket::disconnected, this, &MainWindow::handleQuit);
+        }
+    }
+    connect(this, &MainWindow::dataReceived, this, &MainWindow::handleRead);
+}
+
 void MainWindow::gameInit() {
     for (int i = CardSize::Three; i <= CardSize::Two; i++) {
         for (int j = (int)CardKind::Spade; j <= (int)CardKind::Club; j++) {
@@ -79,6 +223,26 @@ void MainWindow::gameInit() {
     sendToRest("repaint");
 }
 
+void MainWindow::init() {
+    disconnect(ui->pushButtonDecline, 0, 0, 0);
+    disconnect(ui->pushButtonLandlord, 0, 0, 0);
+    connect(ui->pushButtonDecline, &QPushButton::clicked, this, &MainWindow::handleSkip);
+    connect(ui->pushButtonLandlord, &QPushButton::clicked, this, &MainWindow::handlePlay);
+    ui->pushButtonDecline->setText("Skip");
+    ui->pushButtonLandlord->setText("Play");
+    ui->pushButtonDecline->setVisible(true);
+    ui->pushButtonLandlord->setVisible(true);
+    ui->pushButtonDecline->setEnabled(false);
+    ui->pushButtonLandlord->setEnabled(false);
+    previousComboType = CardCombo::Illegal;
+    lastPlayer = landlord;
+}
+
+void MainWindow::start() {
+    ui->pushButtonDecline->setEnabled(true);
+    ui->pushButtonLandlord->setEnabled(true);
+}
+
 void MainWindow::reset() {
     player->clearCardsChosen();
     player->reset();
@@ -103,6 +267,8 @@ void MainWindow::reset() {
         sendTo(0, ("complete;" + QString::number((int)player->getType())).toUtf8());
     } repaint();
 }
+
+//-----抢地主-----
 
 void MainWindow::paticipate(int number, int current) {
     if (number == 1) {
@@ -192,59 +358,7 @@ void MainWindow::paticipate(int number, int current) {
     }
 }
 
-MainWindow::~MainWindow() {
-    delete ui;
-}
-
-void MainWindow::getDataFromDialog() {
-    switch (player->getType()) {
-        case (PlayerType::A): {
-            connects[0] = nullptr;
-            connects[1] = inputDialog->getConnectionAB();
-            connects[2] = inputDialog->getConnectionAC();
-            buffers.insert(connects[1], new QByteArray());
-            sizes.insert(connects[1], new qint32(0));
-            buffers.insert(connects[2], new QByteArray());
-            sizes.insert(connects[2], new qint32(0));
-            break;
-        }
-        case (PlayerType::B): {
-            connects[0] = inputDialog->getSocketOne();
-            connects[1] = nullptr;
-            connects[2] = inputDialog->getConnectionBC();
-            buffers.insert(connects[0], new QByteArray());
-            sizes.insert(connects[0], new qint32(0));
-            buffers.insert(connects[2], new QByteArray());
-            sizes.insert(connects[2], new qint32(0));
-            break;
-        }
-        case (PlayerType::C): {
-            connects[0] = inputDialog->getSocketOne();
-            connects[1] = inputDialog->getSocketTwo();
-            connects[2] = nullptr;
-            buffers.insert(connects[0], new QByteArray());
-            sizes.insert(connects[0], new qint32(0));
-            buffers.insert(connects[1], new QByteArray());
-            sizes.insert(connects[1], new qint32(0));
-            break;
-        }
-    }
-    for (auto&& each : connects) {
-        if (each != nullptr) {
-            disconnect(each, 0, 0, 0);
-            connect(each, &QTcpSocket::readyRead, this, &MainWindow::readyRead);
-            connect(each, &QTcpSocket::disconnected, this, &MainWindow::handleQuit);
-        }
-    }
-    connect(this, &MainWindow::dataReceived, this, &MainWindow::handleRead);
-}
-
-QByteArray MainWindow::IntToArray(qint32 source) {
-    QByteArray temp;
-    QDataStream data(&temp, QIODevice::ReadWrite);
-    data << source;
-    return temp;
-}
+//-----信息发送和接受函数-----
 
 bool MainWindow::sendTo(int dst, QByteArray data) {
     QTcpSocket* socket = connects[dst];
@@ -291,97 +405,18 @@ Assist::PlayerType MainWindow::previousOne() const {
     return PlayerType((int(player->getType()) + 2) % 3);
 }
 
-void MainWindow::paintEvent(QPaintEvent *ev) {
-    Q_UNUSED(ev);
-
-    QPainter painter(this);
-    painter.save();
-    QPixmap pixmap;
-    painter.translate(xpos, ypos);
-    int cnt = 0;
-    for (const auto& each : player->expose()) {
-        QPixmap pixmap;
-        QString fileName;
-        fileName += cardKinds[int(each.getCardKind())];
-        fileName += cardSizes[int(each.getCardSize())];
-        pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
-        QPixmap scaledPixmap = pixmap.scaled(pixmap.size() * 0.6, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-        if (each.getChosen() == true) {
-            painter.drawPixmap(cnt, -40, pixmap);
-        } else {
-            painter.drawPixmap(cnt, 0, pixmap);
-        }
-        cnt += 40;
-    }
-    cnt = 0;
-    painter.restore();
-    painter.save();
-    painter.translate(xcenter, ycenter);
-    for (const auto& each : previousCombo) {
-        QPixmap pixmap;
-        QString fileName;
-        fileName += cardKinds[int(each.getCardKind())];
-        fileName += cardSizes[int(each.getCardSize())];
-        pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
-        QPixmap scaledPixmap = pixmap.scaled(pixmap.size() * 0.6, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-        painter.drawPixmap(cnt, 0, scaledPixmap);
-        cnt += 40;
-    }
-    cnt = 0;
-    painter.restore();
-    painter.save();
-    painter.translate(xlandlord, ylandlord);
-    for (const auto& each : landlordCards) {
-        QPixmap pixmap;
-        if (landlordDecided) {
-            QString fileName;
-            fileName += cardKinds[int(each.getCardKind())];
-            fileName += cardSizes[int(each.getCardSize())];
-            pixmap.load("../MyDouDizhu/cards/" + fileName + ".png");
-        } else {
-            pixmap.load("../MyDouDizhu/cards/PADDING.png");
-        }
-        QPixmap scaledPixmap = pixmap.scaled(pixmap.size() * 0.3, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-        painter.drawPixmap(cnt, 0, scaledPixmap);
-        cnt += 60;
-    }
-    cnt = 0;
-    painter.restore();
-    painter.save();
-    painter.translate(xprevious, yprevious);
-    painter.rotate(90);
-    QPixmap padPixmap("../MyDouDizhu/cards/PADDING.png");
-    QPixmap scaledPadPixmap = padPixmap.scaled(padPixmap.size() * 0.5, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    for (int i = 0; i < cardNumPrevious; i++) {
-        painter.drawPixmap(cnt, 0, scaledPadPixmap);
-        cnt += 10;
-    }
-    cnt = 0;
-    painter.restore();
-    painter.translate(xnext, ynext);
-    painter.rotate(90);
-    for (int i = 0; i < cardNumNext; i++) {
-        painter.drawPixmap(cnt, 0, scaledPadPixmap);
-        cnt += 10;
-    }
+QByteArray MainWindow::IntToArray(qint32 source) {
+    QByteArray temp;
+    QDataStream data(&temp, QIODevice::ReadWrite);
+    data << source;
+    return temp;
 }
 
-void MainWindow::mousePressEvent(QMouseEvent *ev) {
-    int x = ev->x() - xpos;
-    int y = ev->y() - ypos;
-
-    int cardHeight = 300;
-    if (y > 0 && y < cardHeight && x > 0) {
-        unsigned int cx = x / 40;
-        if (cx >= player->expose().size() - 1 && cx <= player->expose().size() + 3) {
-            cx = player->expose().size() - 1;
-        } else if (cx > player->expose().size() + 3) {
-            return;
-        }
-        player->toggleChosen(cx);
-        qDebug() << "clicked" << x << y << "and card number" << cx << " is toggled";
-        repaint();
-    }
+qint32 MainWindow::ArrayToInt(QByteArray source) {
+    qint32 temp;
+    QDataStream data(&source, QIODevice::ReadWrite);
+    data >> temp;
+    return temp;
 }
 
 void MainWindow::readyRead() {
@@ -414,22 +449,7 @@ void MainWindow::readyRead() {
     }
 }
 
-qint32 MainWindow::ArrayToInt(QByteArray source)
-{
-    qint32 temp;
-    QDataStream data(&source, QIODevice::ReadWrite);
-    data >> temp;
-    return temp;
-}
-
-/*
- * paticipate 从我开始抢地主
- *
- * landlord;num1;num2 我是第num1个抢地主的人,最后一个抢过的人是num2
- *
- * chosen;num 地主是num
- *
- */
+//-----自定义的eventHandler-----
 
 void MainWindow::handleRead(QByteArray data) {
     QString message = QString(data);
@@ -556,25 +576,7 @@ void MainWindow::handleRead(QByteArray data) {
     }
 }
 
-void MainWindow::init() {
-    disconnect(ui->pushButtonDecline, 0, 0, 0);
-    disconnect(ui->pushButtonLandlord, 0, 0, 0);
-    connect(ui->pushButtonDecline, &QPushButton::clicked, this, &MainWindow::handleSkip);
-    connect(ui->pushButtonLandlord, &QPushButton::clicked, this, &MainWindow::handlePlay);
-    ui->pushButtonDecline->setText("Skip");
-    ui->pushButtonLandlord->setText("Play");
-    ui->pushButtonDecline->setVisible(true);
-    ui->pushButtonLandlord->setVisible(true);
-    ui->pushButtonDecline->setEnabled(false);
-    ui->pushButtonLandlord->setEnabled(false);
-    previousComboType = CardCombo::Illegal;
-    lastPlayer = landlord;
-}
 
-void MainWindow::start() {
-    ui->pushButtonDecline->setEnabled(true);
-    ui->pushButtonLandlord->setEnabled(true);
-}
 
 void MainWindow::handleSkip() {
     //直接把上家出的牌、对应的类型和最后一个出过牌的人发给下家
