@@ -53,7 +53,7 @@ void MainWindow::mousePressEvent(QMouseEvent *ev) {
             return;
         }
         player->toggleChosen(cx);
-        qDebug() << "clicked" << x << y << "and card number" << cx << " is toggled";
+        //qDebug() << "clicked" << x << y << "and card number" << cx << " is toggled";
         repaint();
     }
 }
@@ -260,7 +260,7 @@ void MainWindow::reset() {
     ui->pushButtonLandlord->setText("Try");
     disconnect(ui->pushButtonDecline, 0, 0, 0);
     disconnect(ui->pushButtonLandlord, 0, 0, 0);
-    qDebug() << (int)player->getType() << "reset";
+    //qDebug() << (int)player->getType() << "reset";
     replay[0] = replay[1] = replay[2] = false;
     readyB = readyC = false;
     if (player->getType() != PlayerType::A) {
@@ -425,24 +425,20 @@ void MainWindow::readyRead() {
     QByteArray *buffer = buffers.value(socket);
     qint32 *s = sizes.value(socket);
     qint32 size = *s;
-    while (socket->bytesAvailable() > 0)
-    {
+    while (socket->bytesAvailable() > 0) {
         buffer->append(socket->readAll());
-        while ((size == 0 && buffer->size() >= 4) || (size > 0 && buffer->size() >= size))
-        {
-            if (size == 0 && buffer->size() >= 4)
-            {
+        while ((size == 0 && buffer->size() >= 4) || (size > 0 && buffer->size() >= size)) {
+            if (size == 0 && buffer->size() >= 4) {
                 size = ArrayToInt(buffer->mid(0, 4));
                 *s = size;
                 buffer->remove(0, 4);
             }
-            if (size > 0 && buffer->size() >= size)
-            {
+            if (size > 0 && buffer->size() >= size) {
                 QByteArray data = buffer->mid(0, size);
                 buffer->remove(0, size);
                 size = 0;
                 *s = size;
-                qDebug() << data;
+                //qDebug() << data;
                 emit dataReceived(data);
             }
         }
@@ -455,7 +451,7 @@ void MainWindow::handleRead(QByteArray data) {
     QString message = QString(data);
     QStringList attrList = message.split(";");
     if (attrList.size() == 0) {
-        qDebug() << "Empty message got!";
+        //qDebug() << "Empty message got!";
         return;
     }
     if (attrList[0] == "paticipate") {
@@ -486,7 +482,7 @@ void MainWindow::handleRead(QByteArray data) {
         }
         landlordDecided = true;
         repaint();
-        qDebug() << (int)landlord;
+        //qDebug() << (int)landlord;
     } else if (attrList[0] == "card") {
         int cnt = 0;
         for (const auto& each : attrList) {
@@ -514,7 +510,7 @@ void MainWindow::handleRead(QByteArray data) {
             cardNumPrevious -= previousCombo.size();
             ui->lcdPrevious->display(cardNumPrevious);
         }
-        qDebug() << (int)previousComboType << (int)lastPlayer;
+        //qDebug() << (int)previousComboType << (int)lastPlayer;
         repaint();
         if (lastPlayer == player->getType() && attrList.indexOf("skipped") != -1)
             ui->pushButtonDecline->setEnabled(false);
@@ -527,7 +523,7 @@ void MainWindow::handleRead(QByteArray data) {
         player->clearCardsChosen();
         for (const auto& each : attrList) {
             if (each != "doubleprevious" && each != "" && each != "played" && each != "skipped") {
-                qDebug() << each;
+                //qDebug() << each;
                 previousCombo.push_back(Card(each));
             }
         }
@@ -603,10 +599,6 @@ void MainWindow::handlePlay() { //
     CardCombo chosenCardCombo = player->checkCards();
     Comparer checkGreater;
     auto chosenCard = player->getChosenCard();
-    QString debugMessage = "Cards chosen:";
-    for (const auto& each : chosenCard) {
-        debugMessage += each.toString();
-    } qDebug() << debugMessage;
     if (chosenCardCombo != CardCombo::Illegal) { //合法
         if (previousComboType == CardCombo::Illegal || lastPlayer == player->getType() ||
             chosenCardCombo == CardCombo::SuperBomb ||

@@ -151,7 +151,7 @@ Assist::CardCombo Player::checkCards() {
     for (int i = 0; i < 15; i++) {
         auto each = checkers[i];
         if ((this->*each)()) {
-            qDebug() << (int)combos[i];
+            //qDebug() << (int)combos[i];
             return combos[i];
         }
     }
